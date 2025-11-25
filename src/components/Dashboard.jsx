@@ -1,18 +1,80 @@
-  import React, { useState } from 'react';
+  import React, { use, useEffect, useState  } from 'react';
 import { Calendar, Clock, Users, Home, BookOpen, User, LogOut, Waves, MapPin } from 'lucide-react';
   import BookingForm from './BookingForm.jsx';
+  import { useNavigate } from 'react-router-dom';
+  import axios from "axios"
   
   const Dashboard = () => {
+    const navigate = useNavigate();
     const [user, setUser] = useState(null);
     const [activeTab, setActiveTab] = useState('home');
-      const [bookings, setBookings] = useState([]);
-  const [selectedFacility, setSelectedFacility] = useState(null);
+    const [bookings, setBookings] = useState([]);
+    const [selectedFacility, setSelectedFacility] = useState(null);
+
+    const getMyBookings = async() => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get('http://localhost:3002/api/bookings/my-bookings', {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+        const data = response.data;
+        if (data.success) {
+          console.log("Bookings:", data.bookings);
+          setBookings(data.bookings);
+        } else {
+          setBookings([]);
+        }
+      } catch (error) {
+        setBookings([]);
+      }
+    }
+    
+
+    const getUser = async() => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get('http://localhost:3002/api/auth/me', {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+        const data = response.data;
+        if (data.success) {
+          setUser(data.user);
+        } else {
+          setUser(null);
+        }
+      } catch (error) {
+        setUser(null);
+      }
+    }
+
+    const handleLogout = () => {
+      localStorage.removeItem('token');
+      localStorage.removeItem('role');
+      navigate('/login');
+      setUser(null);
+      setBookings([]);
+    }
 
   // Sample turfs data
   const turfs = [
-    { id: 1, name: 'Turf', type: 'turf', price: 1500, capacity: 12, image: '🏟️', available: true },
-    { id: 2, name: 'Turf + Swimming Pool', type: 'combo', price: 1200, capacity: 12, image: '🏊 + ⚽', available: true },
+    { id: 1, name: 'Turf', type: 'turf', price: 1200, capacity: 12, image: `https://images.unsplash.com/photo-1671209151455-86980f5bf293?w=900&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTZ8fHR1cmZ8ZW58MHx8MHx8fDA%3D`, available: true },
+    { id: 2, name: 'Turf + Swimming Pool', type: 'combo', price: 1500, capacity: 12, image: 'https://images.unsplash.com/photo-1763479142280-675629f6db27?w=900&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8dHVyZiUyMCUyQiUyMHBvb2x8ZW58MHx8MHx8fDA%3D', available: true },
+    { id: 3, name: 'Swimming Pool', type: 'pool', price: 100, capacity: 12, image: 'https://images.unsplash.com/photo-1576610616656-d3aa5d1f4534?w=900&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8OHx8c3dpbW1pbmclMjBwb29sfGVufDB8fDB8fHww', available: true }
   ];
+  
+  useEffect(() => {
+      if(activeTab === 'bookings') {
+        getMyBookings();
+      }
+    }, [activeTab]);
+
+  useEffect(() => {
+    getUser();
+  }, []);
 
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950 pb-20">
@@ -26,9 +88,7 @@ import { Calendar, Clock, Users, Home, BookOpen, User, LogOut, Waves, MapPin } f
               </div>
               <button
                 onClick={() => {
-                  setUser(null);
-                  setCurrentPage('home');
-                  setBookings([]);
+                  handleLogout();
                 }}
                 className="p-2 hover:bg-white/10 rounded-lg transition"
               >
@@ -54,13 +114,13 @@ import { Calendar, Clock, Users, Home, BookOpen, User, LogOut, Waves, MapPin } f
                       key={turf.id}
                       className="bg-slate-800/40 backdrop-blur-md rounded-2xl p-8 shadow-xl hover:shadow-2xl transition-all transform hover:-translate-y-1 border border-blue-500/20 hover:border-blue-500/40"
                     >
-                      <div className="text-6xl mb-4 text-center">{turf.image}</div>
+                      <div className="text-6xl mb-4 text-center"> <img src={turf.image} alt={turf.name} className="mx-auto rounded-xl" /></div>
                       <h4 className="text-2xl font-bold text-white mb-3 text-center">{turf.name}</h4>
                       <div className="flex justify-between items-center mb-4">
                         <div className="text-center flex-1">
                           <p className="text-blue-300 text-sm mb-1">Price</p>
                           <p className="text-blue-400 font-bold text-2xl">₹{turf.price}</p>
-                          <p className="text-blue-300 text-xs">per hour</p>
+                          <p className="text-blue-300 text-xs">per {turf.type === 'pool' ? 'person' : 'hour'} </p>
                         </div>
                         <div className="h-12 w-px bg-blue-500/30"></div>
                         <div className="text-center flex-1">
@@ -93,18 +153,21 @@ import { Calendar, Clock, Users, Home, BookOpen, User, LogOut, Waves, MapPin } f
               ) : (
                 <div className="space-y-4">
                   {bookings.map((booking) => (
-                    <div key={booking.id} className="bg-slate-800/40 backdrop-blur-md rounded-2xl p-6 shadow-xl border border-blue-500/20">
+                    <div key={booking._id} className="bg-slate-800/40 backdrop-blur-md rounded-2xl p-6 shadow-xl border border-blue-500/20">
                       <div className="flex justify-between items-start">
                         <div>
                           <h4 className="text-xl font-bold text-white">{booking.facilityName}</h4>
-                          <p className="text-blue-200 mt-1">📅 {booking.date}</p>
+                          <p className="text-blue-200 mt-1">📅 { new Date(booking.date).toLocaleDateString()}</p>
                           <p className="text-blue-200">⏰ {booking.timeSlot}</p>
-                          <p className="text-blue-200">👥 {booking.players} additional players</p>
+                          <p className="text-blue-200">👥 {booking.additionalPlayers} additional players</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-2xl font-bold text-blue-400">₹{booking.price}</p>
+                          <p className="text-2xl font-bold text-blue-400">₹{booking.totalPrice}</p>
                           <span className="inline-block mt-2 px-3 py-1 bg-green-500/20 text-green-300 rounded-full text-sm font-semibold border border-green-500/30">
                             {booking.status}
+                          </span>
+                          <span className="inline-block mt-2 px-3 py-1 bg-green-500/20 text-green-300 rounded-full text-sm font-semibold border border-green-500/30">
+                            {booking.paymentStatus}
                           </span>
                         </div>
                       </div>

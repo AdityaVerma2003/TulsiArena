@@ -2,6 +2,7 @@ import { User } from 'lucide-react';
 import React , {useState} from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from './Navbar';
+import Footer from './Footer';
 
 
 const HomePage = () => {
@@ -66,14 +67,12 @@ const HomePage = () => {
 
         {/* Top Navigation Bar */}
         <nav className="relative z-20 flex justify-between items-center px-8 py-6">
-            <Navbar />
           {/* Admin Login - Top Right */}
           <button
             onClick={() => navigate('/login')}
             className="flex items-center gap-2 px-6 py-3 bg-slate-800/60 backdrop-blur-md rounded-full border border-blue-500/30 hover:bg-slate-700/60 transition-all hover:scale-105"
           >
             <User size={20} className="text-blue-400" />
-            <span className="text-white font-medium">Admin Login</span>
           </button>
         </nav>
 

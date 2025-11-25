@@ -1,7 +1,7 @@
   
-  import { useState } from "react";
-import Navbar from "./Navbar";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
   
   
   const LoginPage = () => {
@@ -9,7 +9,7 @@ import { useNavigate } from "react-router-dom";
     const [errors, setErrors] = useState({});
     const navigate = useNavigate();
 
-    const handleSubmit = () => {
+    const handleSubmit = async() => {
       if (!formData.email || !formData.password) {
         setErrors({ 
           general: 'Please fill all fields' 
@@ -17,8 +17,27 @@ import { useNavigate } from "react-router-dom";
         return;
       }
 
-      setUser({ name: 'John Doe', email: formData.email });
-      setCurrentPage('dashboard');
+     try {
+      const response = await axios.post('http://localhost:3002/api/auth/login', formData);
+      const data = response.data;
+      if (data.success) {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('role', data.user.role);
+        if(data.user.role === 'admin') {
+          navigate('/admin');
+        } else {
+        navigate('/dashboard');
+        }
+      } else {
+        setErrors({ 
+          general: data.message || 'Login failed' 
+        });
+      } 
+     } catch (error) {
+      setErrors({ 
+        general: error.response?.data?.message || 'An error occurred during login' 
+      });
+     }
     };
 
     return (
@@ -45,8 +64,6 @@ import { useNavigate } from "react-router-dom";
           </svg>
         </div>
 
-        {/* Top Navigation */}
-        <Navbar/>
 
         {/* Login Form - Centered */}
         <div className="relative z-10 flex items-center justify-center min-h-[calc(100vh-100px)] px-4">

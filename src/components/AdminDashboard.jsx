@@ -1,5 +1,6 @@
  import { BookOpen, Calendar, LogOut } from "lucide-react";
 import React , {useState} from "react";
+import Footer from "./Footer";
  
  const AdminDashboard = () => {
     const [activeTab, setActiveTab] = useState('overview');
@@ -49,7 +50,7 @@ import React , {useState} from "react";
         <div className="bg-slate-900/80 backdrop-blur-md border-b border-blue-500/20 text-white p-6 shadow-lg">
           <div className="container mx-auto flex justify-between items-center">
             <div>
-              <h2 className="text-3xl font-bold">Admin Dashboard</h2>
+              <h2 className="text-2xl  font-bold">Admin Dashboard</h2>
               <p className="text-blue-200 mt-1">Tulsi Arena Management</p>
             </div>
             <button
@@ -59,7 +60,7 @@ import React , {useState} from "react";
               }}
               className="flex items-center gap-2 px-6 py-3 bg-red-500/20 hover:bg-red-500/30 rounded-xl border border-red-500/30 transition"
             >
-              <LogOut size={20} />
+              <LogOut size={15} />
               <span>Logout</span>
             </button>
           </div>

@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useMemo } from "react";
 import Navbar from "./Navbar";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 
 const RegisterPage = () => {
     const [formData, setFormData] = useState({ 
@@ -85,7 +86,9 @@ const RegisterPage = () => {
       return allFieldsFilled && noErrors;
     };
 
-    const handleSubmit = () => {
+
+
+    const handleSubmit = async() => {
       const allErrors = {};
       Object.keys(formData).forEach(key => {
         allErrors[key] = getFieldError(key, formData[key]);
@@ -101,9 +104,18 @@ const RegisterPage = () => {
       }
 
       setMessage({ type: 'success', text: 'Registration successful! Redirecting...' });
-      setTimeout(() => {
-        setCurrentPage('login');
-      }, 1500);
+      try {
+        const response = await axios.post('http://localhost:3002/api/auth/register', formData);
+        if (response.data.success) {
+          setTimeout(() => {
+            navigate('/login');
+          }, 1500);
+        } else {
+          setMessage({ type: 'error', text: response.data.message || 'Registration failed' });
+        }
+      } catch (error) {
+        setMessage({ type: 'error', text: error.response?.data?.message || 'An error occurred during registration' });
+      }
     };
 
     return (
@@ -130,8 +142,7 @@ const RegisterPage = () => {
           </svg>
         </div>
 
-        {/* Top Navigation */}
-       <Navbar/>
+
 
         {/* Registration Form */}
         <div className="relative z-10 flex items-center justify-center min-h-[calc(100vh-100px)] px-4 py-8">
