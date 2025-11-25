@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+const API_URL = "https://tulsiarena-backend.onrender.com"
   
   
   const LoginPage = () => {
@@ -18,7 +19,7 @@ import axios from "axios";
       }
 
      try {
-      const response = await axios.post('http://localhost:3002/api/auth/login', formData);
+      const response = await axios.post(`${API_URL}/api/auth/login`, formData);
       const data = response.data;
       if (data.success) {
         localStorage.setItem('token', data.token);

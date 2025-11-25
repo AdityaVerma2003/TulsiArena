@@ -3,6 +3,7 @@ import { Calendar, Clock, Users, Home, BookOpen, User, LogOut, Waves, MapPin } f
   import BookingForm from './BookingForm.jsx';
   import { useNavigate } from 'react-router-dom';
   import axios from "axios"
+  const API_URL = "https://tulsiarena-backend.onrender.com"
   
   const Dashboard = () => {
     const navigate = useNavigate();
@@ -14,7 +15,7 @@ import { Calendar, Clock, Users, Home, BookOpen, User, LogOut, Waves, MapPin } f
     const getMyBookings = async() => {
       try {
         const token = localStorage.getItem('token');
-        const response = await axios.get('http://localhost:3002/api/bookings/my-bookings', {
+        const response = await axios.get(`${API_URL}/api/bookings/my-bookings`, {
           headers: {
             Authorization: `Bearer ${token}`
           }
@@ -35,7 +36,7 @@ import { Calendar, Clock, Users, Home, BookOpen, User, LogOut, Waves, MapPin } f
     const getUser = async() => {
       try {
         const token = localStorage.getItem('token');
-        const response = await axios.get('http://localhost:3002/api/auth/me', {
+        const response = await axios.get(`${API_URL}/api/auth/me`, {
           headers: {
             Authorization: `Bearer ${token}`
           }

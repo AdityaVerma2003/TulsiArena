@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { Calendar, Clock, Users, Plus, Minus, IndianRupee, ArrowRightLeft } from 'lucide-react';
+const API_URL = "https://tulsiarena-backend.onrender.com"
 
 // --- Utility Functions for Dynamic Time Slot Generation ---
 const generateTimeSlots = (startHour, endHour, slotDurationMinutes, gapMinutes) => {

@@ -2,6 +2,7 @@ import React, { useState, useCallback, useMemo } from "react";
 import Navbar from "./Navbar";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+const API_URL = "https://tulsiarena-backend.onrender.com"
 
 const RegisterPage = () => {
     const [formData, setFormData] = useState({ 
@@ -105,7 +106,7 @@ const RegisterPage = () => {
 
       setMessage({ type: 'success', text: 'Registration successful! Redirecting...' });
       try {
-        const response = await axios.post('http://localhost:3002/api/auth/register', formData);
+        const response = await axios.post(`${API_URL}/api/auth/register`, formData);
         if (response.data.success) {
           setTimeout(() => {
             navigate('/login');
