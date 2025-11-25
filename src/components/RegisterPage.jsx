@@ -108,9 +108,7 @@ const RegisterPage = () => {
       try {
         const response = await axios.post(`${API_URL}/api/auth/register`, formData);
         if (response.data.success) {
-          setTimeout(() => {
             navigate('/login');
-          }, 1500);
         } else {
           setMessage({ type: 'error', text: response.data.message || 'Registration failed' });
         }
