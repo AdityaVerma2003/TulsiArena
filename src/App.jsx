@@ -6,6 +6,7 @@ import Dashboard from "./components/Dashboard.jsx";
 import AdminDashboard from "./components/AdminDashboard.jsx";
 import Footer from "./components/Footer.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
+import BookingPage from "./components/BookingPage.jsx";
 
 const App = () => {
   return (

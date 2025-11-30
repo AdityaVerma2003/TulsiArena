@@ -2,7 +2,7 @@ import React, { useState, useCallback, useMemo } from "react";
 import Navbar from "./Navbar";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-const API_URL = "https://tulsiarena-backend.onrender.com"
+const API_URL = import.meta.env.VITE_API_URL;
 
 const RegisterPage = () => {
     const [formData, setFormData] = useState({ 
@@ -49,15 +49,7 @@ const RegisterPage = () => {
         case 'password':
           if (!value) {
             error = 'Password is required';
-          } else if (value.length < 8) {
-            error = 'Password must be at least 8 characters';
-          } else if (!/(?=.*[a-z])/.test(value)) {
-            error = 'Must contain a lowercase letter';
-          } else if (!/(?=.*[A-Z])/.test(value)) {
-            error = 'Must contain an uppercase letter';
-          } else if (!/(?=.*\d)/.test(value)) {
-            error = 'Must contain a number';
-          }
+          } 
           break;
         default:
           break;
@@ -254,30 +246,7 @@ const RegisterPage = () => {
                     <span>⚠️</span> {errors.password}
                   </p>
                 )}
-                {!errors.password && formData.password && (
-                  <div className="mt-2 space-y-1">
-                    <p className={`text-xs flex items-center gap-1 ${
-                      formData.password.length >= 8 ? 'text-green-400' : 'text-slate-400'
-                    }`}>
-                      {formData.password.length >= 8 ? '✓' : '○'} At least 8 characters
-                    </p>
-                    <p className={`text-xs flex items-center gap-1 ${
-                      /(?=.*[a-z])/.test(formData.password) ? 'text-green-400' : 'text-slate-400'
-                    }`}>
-                      {/(?=.*[a-z])/.test(formData.password) ? '✓' : '○'} One lowercase letter
-                    </p>
-                    <p className={`text-xs flex items-center gap-1 ${
-                      /(?=.*[A-Z])/.test(formData.password) ? 'text-green-400' : 'text-slate-400'
-                    }`}>
-                      {/(?=.*[A-Z])/.test(formData.password) ? '✓' : '○'} One uppercase letter
-                    </p>
-                    <p className={`text-xs flex items-center gap-1 ${
-                      /(?=.*\d)/.test(formData.password) ? 'text-green-400' : 'text-slate-400'
-                    }`}>
-                      {/(?=.*\d)/.test(formData.password) ? '✓' : '○'} One number
-                    </p>
-                  </div>
-                )}
+              
               </div>
 
               <button
