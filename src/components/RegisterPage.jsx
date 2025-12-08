@@ -99,8 +99,11 @@ const RegisterPage = () => {
       setMessage({ type: 'success', text: 'Registration successful! Redirecting...' });
       try {
         const response = await axios.post(`${API_URL}/api/auth/register`, formData);
+        localStorage.setItem('token', response.data.token);
+        localStorage.setItem('role', response.data.user.role);
+        console.log("response from register" , res)
         if (response.data.success) {
-            navigate('/login');
+            navigate('/dashboard');
         } else {
           setMessage({ type: 'error', text: response.data.message || 'Registration failed' });
         }

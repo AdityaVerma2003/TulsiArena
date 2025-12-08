@@ -1,4 +1,4 @@
-import { BookOpen, Calendar, LogOut, Eye, Mail, Phone, Users, Tag, IndianRupee, Clock, X } from "lucide-react";
+import { BookOpen, Calendar, LogOut, Eye, Mail, Phone, Users, Tag, IndianRupee, Clock, X, Building2 } from "lucide-react";
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import * as XLSX from "xlsx";
@@ -116,6 +116,10 @@ const AdminDashboard = () => {
     const [bookings, setBookings] = useState([]);
     const [users, setUsers] = useState([]);
     const [loadingUsers, setLoadingUsers] = useState(false);
+    const [facilityStats, setFacilityStats] = useState([]);
+    const [selectedFacility, setSelectedFacility] = useState(null);
+    const [facilityBookings, setFacilityBookings] = useState([]);
+    const [loadingFacilityBookings, setLoadingFacilityBookings] = useState(false);
     
     // State for Modal
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -130,6 +134,7 @@ const AdminDashboard = () => {
                 }
             });
             setStats(resp.data.stats);
+            setFacilityStats(resp.data.stats.facilityStats || []);
         } catch (error) {
             console.error("Error in fetching dashboard stats:", error);
         }
@@ -170,6 +175,26 @@ const AdminDashboard = () => {
         }
     };
 
+    const getBookingsByFacility = async (facilityName) => {
+        setLoadingFacilityBookings(true);
+        try {
+            const token = localStorage.getItem('token');
+            const resp = await axios.get(`${API_URL}/api/admin/bookings/facility/${facilityName}`, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+            if (resp.data.success) {
+                setFacilityBookings(resp.data.bookings);
+                setSelectedFacility(facilityName);
+            }
+        } catch (error) {
+            console.error("Error in fetching facility bookings:", error);
+        } finally {
+            setLoadingFacilityBookings(false);
+        }
+    };
+
     const exportToExcel = () => {
         if (!bookings || bookings.length === 0) {
             alert("No bookings available to export");
@@ -200,6 +225,32 @@ const AdminDashboard = () => {
         XLSX.writeFile(wb, "Bookings.xlsx");
     };
 
+    const exportFacilityBookingsToExcel = () => {
+        if (!facilityBookings || facilityBookings.length === 0) {
+            alert("No bookings available to export");
+            return;
+        }
+
+        const cleanedData = facilityBookings.map((b) => ({
+            Name: b.user?.name || "",
+            Email: b.user?.email || "",
+            Mobile: b.user?.mobile || "",
+            Date: new Date(b.date).toLocaleDateString(),
+            TimeSlots: b.timeSlots.join(", "),
+            AdditionalPlayers: b.additionalPlayers,
+            BasePrice: b.basePrice,
+            TotalPrice: b.totalPrice,
+            Status: b.status,
+            PaymentStatus: b.paymentStatus,
+            CreatedAt: new Date(b.createdAt).toLocaleString(),
+        }));
+
+        const ws = XLSX.utils.json_to_sheet(cleanedData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, selectedFacility);
+        XLSX.writeFile(wb, `${selectedFacility}_Bookings.xlsx`);
+    };
+
     const exportUsersToExcel = () => {
         if (!users || users.length === 0) {
             alert("No users available to export");
@@ -208,7 +259,7 @@ const AdminDashboard = () => {
         const cleanedData = users.map((u) => ({
             Name: u.name,
             Email: u.email,
-            Mobile: u.mobile,
+            Mobile: u.mobile || 'N/A',
             JoinedAt: new Date(u.createdAt).toLocaleDateString()
         }));
         const worksheet = XLSX.utils.json_to_sheet(cleanedData);
@@ -283,6 +334,16 @@ const AdminDashboard = () => {
                         All Bookings
                     </button>
                     <button
+                        onClick={() => setActiveTab('facilities')}
+                        className={`px-4 sm:px-6 py-2 sm:py-3 rounded-xl font-semibold transition text-sm sm:text-base flex items-center gap-2 ${activeTab === 'facilities'
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-slate-800/40 text-blue-200 hover:bg-slate-800/60'
+                            }`}
+                    >
+                        <Building2 size={18} />
+                        Facilities
+                    </button>
+                    <button
                         onClick={() => setActiveTab('users')}
                         className={`px-4 sm:px-6 py-2 sm:py-3 rounded-xl font-semibold transition text-sm sm:text-base ${activeTab === 'users'
                             ? 'bg-blue-600 text-white'
@@ -347,7 +408,7 @@ const AdminDashboard = () => {
                             </div>
                         </div>
 
-                        {/* Recent Bookings (uses the same card structure as All Bookings now) */}
+                        {/* Recent Bookings */}
                         <div className="bg-slate-800/40 backdrop-blur-md rounded-2xl p-6 border border-blue-500/20">
                             <h3 className="text-2xl font-bold text-white mb-4">Recent Bookings</h3>
                             {bookings.length === 0 ? (
@@ -379,7 +440,7 @@ const AdminDashboard = () => {
                     </div>
                 )}
 
-                {/* All Bookings Tab (UPDATED) */}
+                {/* All Bookings Tab */}
                 {activeTab === 'bookings' && (
                     <div className="bg-slate-800/40 backdrop-blur-md rounded-2xl p-6 border border-blue-500/20">
                         <div className="flex justify-between items-center mb-4">
@@ -430,7 +491,98 @@ const AdminDashboard = () => {
                     </div>
                 )}
 
-                {/* Users Tab (No change) */}
+                {/* Facilities Tab - NEW */}
+                {activeTab === 'facilities' && (
+                    <div className="space-y-6">
+                        {/* Facility Stats Cards */}
+                        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {facilityStats.map((facility) => (
+                                <div 
+                                    key={facility._id} 
+                                    onClick={() => getBookingsByFacility(facility._id)}
+                                    className="bg-slate-800/40 backdrop-blur-md rounded-2xl p-6 border border-blue-500/20 cursor-pointer hover:bg-slate-800/60 transition transform hover:scale-105"
+                                >
+                                    <div className="flex items-center justify-between mb-4">
+                                        <div className="p-3 bg-purple-500/20 rounded-xl">
+                                            <Building2 size={32} className="text-purple-400" />
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-sm text-blue-200">Total Bookings</p>
+                                            <p className="text-3xl font-bold text-white">{facility.count}</p>
+                                        </div>
+                                    </div>
+                                    <h3 className="text-xl font-bold text-white mb-2">{facility._id}</h3>
+                                    <p className="text-green-400 text-lg font-semibold">₹{facility.revenue}</p>
+                                    <p className="text-xs text-blue-300 mt-2">Click to view bookings →</p>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Facility Bookings Details */}
+                        {selectedFacility && (
+                            <div className="bg-slate-800/40 backdrop-blur-md rounded-2xl p-6 border border-blue-500/20">
+                                <div className="flex justify-between items-center mb-4">
+                                    <div>
+                                        <h3 className="text-2xl font-bold text-white">{selectedFacility} Bookings</h3>
+                                        <p className="text-blue-200 mt-1">Total: {facilityBookings.length} bookings</p>
+                                    </div>
+                                    <div className="flex gap-3">
+                                        <button
+                                            onClick={exportFacilityBookingsToExcel}
+                                            className="px-5 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl shadow-lg flex items-center gap-2"
+                                        >
+                                            📥 Export
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setSelectedFacility(null);
+                                                setFacilityBookings([]);
+                                            }}
+                                            className="px-5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl shadow-lg"
+                                        >
+                                            Close
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {loadingFacilityBookings ? (
+                                    <div className="text-center py-8">
+                                        <p className="text-blue-200">Loading bookings...</p>
+                                    </div>
+                                ) : facilityBookings.length === 0 ? (
+                                    <p className="text-blue-200 text-center py-8">No bookings found</p>
+                                ) : (
+                                    <div className="space-y-3">
+                                        {facilityBookings.map((booking) => (
+                                            <div key={booking._id} className="bg-slate-700/30 rounded-xl p-4 border border-blue-500/10 flex justify-between items-center transition hover:bg-slate-700/50">
+                                                <div className="flex-grow">
+                                                    <p className="text-white font-semibold">
+                                                        {booking.user?.name || 'N/A'}
+                                                    </p>
+                                                    <p className="text-blue-200 text-sm">
+                                                        📅 {new Date(booking.date).toLocaleDateString()} @ {booking.timeSlots[0]}
+                                                    </p>
+                                                    <p className="text-blue-300 text-xs mt-1">
+                                                        Total: ₹{booking.totalPrice} | {booking.status}
+                                                    </p>
+                                                </div>
+                                                <button
+                                                    onClick={() => handleViewDetails(booking)}
+                                                    className="p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition transform hover:scale-105 shadow-md shadow-blue-500/30"
+                                                    title="View Details"
+                                                >
+                                                    <Eye size={18} />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Users Tab */}
                 {activeTab === 'users' && (
                     <div className="bg-slate-800/40 backdrop-blur-md rounded-2xl p-6 border border-blue-500/20">
                         <div className="flex justify-between items-center mb-6">
@@ -441,56 +593,53 @@ const AdminDashboard = () => {
                             <button
                                 onClick={exportUsersToExcel}
                                 className="px-5 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl shadow-lg flex items-center gap-2"
-                            >
-                                📥 Export to Excel
-                            </button>
+>
+📥 Export to Excel
+</button>
+</div>
+                    {loadingUsers ? (
+                        <div className="text-center py-8">
+                            <p className="text-blue-200">Loading users...</p>
                         </div>
-
-                        {loadingUsers ? (
-                            <div className="text-center py-8">
-                                <p className="text-blue-200">Loading users...</p>
-                            </div>
-                        ) : users.length === 0 ? (
-                            <p className="text-blue-200 text-center py-8">No users found</p>
-                        ) : (
-                            <div className="overflow-x-auto">
-                                <table className="w-full">
-                                    <thead>
-                                        <tr className="border-b border-blue-500/20">
-                                            <th className="text-left py-3 px-4 text-blue-200 font-semibold">Name</th>
-                                            <th className="text-left py-3 px-4 text-blue-200 font-semibold">Email</th>
-                                            <th className="text-left py-3 px-4 text-blue-200 font-semibold">Mobile</th>
-                                            <th className="text-left py-3 px-4 text-blue-200 font-semibold">Joined Date</th>
+                    ) : users.length === 0 ? (
+                        <p className="text-blue-200 text-center py-8">No users found</p>
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className="w-full">
+                                <thead>
+                                    <tr className="border-b border-blue-500/20">
+                                        <th className="text-left py-3 px-4 text-blue-200 font-semibold">Name</th>
+                                        <th className="text-left py-3 px-4 text-blue-200 font-semibold">Email</th>
+                                        <th className="text-left py-3 px-4 text-blue-200 font-semibold">Mobile</th>
+                                        <th className="text-left py-3 px-4 text-blue-200 font-semibold">Joined Date</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {users.map((user) => (
+                                        <tr key={user._id} className="border-b border-blue-500/10 hover:bg-slate-700/20 transition">
+                                            <td className="py-4 px-4">
+                                                <p className="text-white font-semibold">{user.name}</p>
+                                            </td>
+                                            <td className="py-4 px-4">
+                                                <p className="text-blue-200">{user.email}</p>
+                                            </td>
+                                            <td className="py-4 px-4">
+                                                <p className="text-blue-200">{user.mobile || 'N/A'}</p>
+                                            </td>
+                                            <td className="py-4 px-4">
+                                                <p className="text-blue-200">{new Date(user.createdAt).toLocaleDateString()}</p>
+                                                <p className="text-blue-300 text-xs">{new Date(user.createdAt).toLocaleTimeString()}</p>
+                                            </td>
                                         </tr>
-                                    </thead>
-                                    <tbody>
-                                        {users.map((user) => (
-                                            <tr key={user._id} className="border-b border-blue-500/10 hover:bg-slate-700/20 transition">
-                                                <td className="py-4 px-4">
-                                                    <p className="text-white font-semibold">{user.name}</p>
-                                                </td>
-                                                <td className="py-4 px-4">
-                                                    <p className="text-blue-200">{user.email}</p>
-                                                </td>
-                                                <td className="py-4 px-4">
-                                                    <p className="text-blue-200">{user.mobile}</p>
-                                                </td>
-
-                                                <td className="py-4 px-4">
-                                                    <p className="text-blue-200">{new Date(user.createdAt).toLocaleDateString()}</p>
-                                                    <p className="text-blue-300 text-xs">{new Date(user.createdAt).toLocaleTimeString()}</p>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
-                    </div>
-                )}
-            </div>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
-    );
+    </div>
+);
 };
-
 export default AdminDashboard;
