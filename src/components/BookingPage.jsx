@@ -153,17 +153,30 @@ const TimeSlotSelector = ({ date, selectedSlots, setSelectedSlots, facilityType,
         
     }, [date]);
 
-    // Handler for toggling a slot selection (enforces single selection for Turf/Combo/Pool)
-    const handleSlotToggle = useCallback((slot) => {
-        const isSingleSelect = facilityType === 'turf' || facilityType === 'combo' || facilityType === 'pool';
+ const handleSlotToggle = useCallback(
+  (slot) => {
+    const isSingleSelect = facilityType === 'combo' || facilityType === 'pool';
 
-        if (isSingleSelect) {
-             const isCurrentlySelected = selectedSlots.includes(slot);
-             setSelectedSlots(isCurrentlySelected ? [] : [slot]);
-        } else {
-             setSelectedSlots(slot); 
-        }
-    }, [setSelectedSlots, selectedSlots, facilityType]); 
+    if (isSingleSelect) {
+      // keep single selection
+      const isCurrentlySelected = selectedSlots.includes(slot);
+      setSelectedSlots(isCurrentlySelected ? [] : [slot]);
+      return;
+    }
+
+    // MULTIPLE SELECTION FOR TURF
+    const isSelected = selectedSlots.includes(slot);
+
+    if (isSelected) {
+      // remove slot from list
+      setSelectedSlots(selectedSlots.filter((s) => s !== slot));
+    } else {
+      // add slot to list
+      setSelectedSlots([...selectedSlots, slot]);
+    }
+  },
+  [setSelectedSlots, selectedSlots, facilityType]
+);
 
     if (!date) {
         return (
@@ -238,7 +251,7 @@ const BookingPage = ({ facility, setBookings, onClose }) => {
     const [blockedSlots, setBlockedSlots] = useState([]);
     if (!setBookings) setBookings = () => { };
 
-    // --- Configuration Hook based on Facility Type (No Change) ---
+// --- Configuration Hook based on Facility Type ---
     const facilityConfig = useMemo(() => {
         const baseConfig = {
             maxPersons: 4,
@@ -247,27 +260,30 @@ const BookingPage = ({ facility, setBookings, onClose }) => {
             playerLabel: 'Additional Players (Max 4)',
             costLabel: 'Additional Player Cost',
             initialCount: 0,
-            slots: TURF_SLOTS, 
+            slots: TURF_SLOTS,
+            allowMultipleSlots: true, // 🚀 NEW: Allow multiple slot selection for turf
         };
 
         if (facility.type === "turf") {
-            return { ...baseConfig, type: 'Turf', slots: TURF_SLOTS, maxPersons: 12, costPerUnit: 100, playerLabel: 'Additional Players (Max 12)' };
+            return { ...baseConfig, type: 'Turf', slots: TURF_SLOTS, maxPersons: 4, costPerUnit: 100, playerLabel: 'Additional Players (Max 4)', allowMultipleSlots: true };
         } else if (facility.type === "combo") {
             return { 
                 ...baseConfig, 
                 type: 'Turf + Pool (1hr + 1hr)', 
-                slots: TURF_SLOTS, 
+                slots: TURF_SLOTS,
+                allowMultipleSlots: false, // Combo still single slot
             };
         } else if (facility.type === "pool") {
             return {
                 type: 'Pool (3-Hour Access)',
-                maxPersons: 12,
+                maxPersons: 4,
                 isPerPerson: true, 
                 costPerUnit: facility.price, 
                 slots: TURF_SLOTS, 
-                playerLabel: 'Number of Persons (Max 12)',
+                playerLabel: 'Number of Persons (Max 4)',
                 costLabel: 'Per Person Cost',
                 initialCount: 1,
+                allowMultipleSlots: false, // Pool still single slot
             };
         }
         return { ...baseConfig, type: 'Default', slots: TURF_SLOTS };
@@ -496,7 +512,7 @@ const BookingPage = ({ facility, setBookings, onClose }) => {
                     <span className="flex items-center gap-1"><Tag size={16} /> {facilityConfig.type}</span>
                     <span className="flex items-center gap-1 font-bold text-green-400">
                         <IndianRupee size={16} /> {PRICE_PER_SLOT}
-                        {isPool ? " / Person" : " / Slot"}
+                        {isPool ? " / Person" : " / Slot (Capacity: " + facility.capacity + ")"}
                     </span>
                 </div>
             </div>
