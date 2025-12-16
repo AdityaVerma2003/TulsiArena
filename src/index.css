@@ -1,1 +1,15 @@
 @import "tailwindcss";
+
+
+@keyframes review-scroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-review-scroll {
+  animation: review-scroll 10s linear infinite;
+}
