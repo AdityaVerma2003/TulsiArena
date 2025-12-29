@@ -157,6 +157,7 @@ const HomePage = () => {
         <nav className="relative z-20 flex justify-between items-center px-4 sm:px-8 py-6">
           <div className="flex items-center gap-3">
             <img 
+            onClick={()=>navigate("/")}
             src={tulsiVillaLogo}
             className="w-16 h-16 sm:w-16 sm:h-16 rounded-full flex items-center justify-center" alt="Logo" />
             </div>
