@@ -8,6 +8,9 @@ import tulsiVillaImage from '../assets/tulsivilla.jpeg';
 import tulsiVillaImage2 from '../assets/tulsivlla2.jpeg';
 import villaPartyImage from '../assets/villaparty.jpeg';
 import tulsiVillaLogo from '../assets/tulsiarena-logo.png';
+import backgroundImage from '../assets/backgroundImage.jpeg'
+import airbnb from '../assets/airbnb.jpeg';
+import eventvenue from '../assets/eventvenue.jpeg';
 
 const HomePage = () => {
   const navigate = useNavigate();
@@ -17,10 +20,10 @@ const HomePage = () => {
 
   // Loading images - luxury villas and resorts
   const loadingImages = [
-    bornFireImage,
-    bornFireImage2,
-    eveneVenueImage,
+    eventvenue,
+    airbnb,
     tulsiVillaImage,
+    backgroundImage,
     tulsiVillaImage2,
     villaPartyImage
   ];
@@ -147,7 +150,7 @@ const HomePage = () => {
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{
-            backgroundImage: `url(${bornFireImage})`,
+            backgroundImage: `url(${backgroundImage})`,
           }}
         >
           <div className="absolute inset-0 bg-black/60" />
@@ -249,14 +252,14 @@ const HomePage = () => {
             {/* Image 2 - Slide from left */}
             <div className={`transform transition-all duration-1000 ${scrollY > 1000 ? 'translate-x-0 opacity-100' : '-translate-x-20 opacity-0'}`}>
               <div className="relative group overflow-hidden rounded-2xl sm:rounded-3xl shadow-2xl border border-blue-500/20 w-full max-w-[250px] sm:max-w-md">
-                <img src={eveneVenueImage} alt="Arena night view" className="w-full h-[350px] sm:h-[600px] object-cover transition-transform duration-700 group-hover:scale-105" />
+                <img src={eventvenue} alt="Arena night view" className="w-full h-[350px] sm:h-[600px] object-cover transition-transform duration-700 group-hover:scale-105" />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent"></div>
               </div>
             </div>
 
             {/* Image 3 - With animated overlay from bottom, image slides from right */}
             <div className="relative group overflow-hidden rounded-2xl sm:rounded-3xl shadow-2xl border border-blue-500/20 w-full max-w-sm sm:max-w-4xl ml-auto">
-              <img src={tulsiVillaImage} alt="Arena interior facilities" className="w-full h-[200px] sm:h-[500px] object-cover transition-transform duration-700 group-hover:scale-105" />
+              <img src={airbnb} alt="Arena interior facilities" className="w-full h-[200px] sm:h-[500px] object-cover transition-transform duration-700 group-hover:scale-105" />
               <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent"></div>
               
               {/* Animated overlay from bottom */}
