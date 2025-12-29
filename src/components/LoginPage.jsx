@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { GoogleLogin } from '@react-oauth/google';
 import { jwtDecode } from 'jwt-decode';
+import tulsiVillaLogo from '../assets/tulsiarena-logo.png';
 
 const API_URL = import.meta.env.VITE_API_URL;
   
@@ -72,6 +73,13 @@ const LoginPage = () => {
   return (
     <div className="relative min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950 overflow-hidden">
       {/* Animated Wave Background */}
+       <nav className="relative z-20 flex justify-between items-center px-4 sm:px-8 py-6">
+                <div className="flex items-center gap-3">
+                  <img 
+                  src={tulsiVillaLogo}
+                  className="w-16 h-16 sm:w-16 sm:h-16 rounded-full flex items-center justify-center" alt="Logo" />
+                  </div>
+              </nav>
       <div className="absolute inset-0 overflow-hidden opacity-30">
         <svg className="absolute w-full h-full" viewBox="0 0 1440 800" preserveAspectRatio="xMidYMid slice">
           <defs>

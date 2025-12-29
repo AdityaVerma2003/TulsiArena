@@ -1,6 +1,13 @@
 import { User, ArrowUpRight, Star } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import bornFireImage from '../assets/bornfire.jpeg';
+import bornFireImage2 from '../assets/bornfire2.jpeg';
+import eveneVenueImage from '../assets/eventvenue.jpeg';
+import tulsiVillaImage from '../assets/tulsivilla.jpeg';
+import tulsiVillaImage2 from '../assets/tulsivlla2.jpeg';
+import villaPartyImage from '../assets/villaparty.jpeg';
+import tulsiVillaLogo from '../assets/tulsiarena-logo.png';
 
 const HomePage = () => {
   const navigate = useNavigate();
@@ -10,11 +17,12 @@ const HomePage = () => {
 
   // Loading images - luxury villas and resorts
   const loadingImages = [
-    'https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=1200&h=800&fit=crop',
-    'https://images.unsplash.com/photo-1582268611958-ebfd161ef9cf?w=1200&h=800&fit=crop',
-    'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1200&h=800&fit=crop',
-    'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=1200&h=800&fit=crop',
-    'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1200&h=800&fit=crop'
+    bornFireImage,
+    bornFireImage2,
+    eveneVenueImage,
+    tulsiVillaImage,
+    tulsiVillaImage2,
+    villaPartyImage
   ];
 
   const linkClass = 'text-slate-300 hover:text-white transition-colors cursor-pointer';
@@ -89,34 +97,39 @@ const HomePage = () => {
   }, []);
 
 
-  // Loading Screen
+  // Loading Screen - New Design
   if (loading) {
     return (
       <div className="fixed inset-0 bg-slate-950 flex items-center justify-center overflow-hidden z-50">
-        {loadingImages.map((img, index) => (
-          <div
-            key={index}
-            className={`absolute inset-0 transition-opacity duration-1000 ${index === currentImageIndex ? 'opacity-100' : 'opacity-0'
+        {/* Fixed width container for images */}
+        <div className="relative w-[400px] h-[500px] overflow-hidden rounded-3xl shadow-2xl border-4 border-blue-500/30">
+          {loadingImages.map((img, index) => (
+            <div
+              key={index}
+              className={`absolute inset-0 transition-all duration-1000 ${
+                index === currentImageIndex 
+                  ? 'translate-y-0 opacity-100' 
+                  : index < currentImageIndex 
+                    ? '-translate-y-full opacity-0' 
+                    : 'translate-y-full opacity-0'
               }`}
-          >
-            <img
-              src={img}
-              alt={`Loading ${index + 1}`}
-              className="w-full h-full object-cover"
-            />
-            <div className="absolute inset-0 bg-black/50" />
-          </div>
-        ))}
+            >
+              <img
+                src={img}
+                alt={`Loading ${index + 1}`}
+                className="w-full h-full object-contain bg-slate-900"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent" />
+            </div>
+          ))}
 
-        {/* Loading Text */}
-        <div className="relative z-10 text-center">
-          <h1 className="text-6xl sm:text-8xl font-black text-white mb-6 animate-pulse">
-            TulsiArena
-          </h1>
-          <div className="flex gap-2 justify-center">
-            <div className="w-3 h-3 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-            <div className="w-3 h-3 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-            <div className="w-3 h-3 bg-pink-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+          {/* Loading Text Overlay */}
+          <div className="absolute bottom-8 left-0 right-0 z-10 text-center px-6">
+            <div className="flex gap-2 justify-center">
+              <div className="w-3 h-3 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+              <div className="w-3 h-3 bg-purple-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+              <div className="w-3 h-3 bg-pink-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+            </div>
           </div>
         </div>
       </div>
@@ -134,14 +147,19 @@ const HomePage = () => {
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{
-            backgroundImage: "url('https://images.unsplash.com/photo-1501785888041-af3ef285b470')",
+            backgroundImage: `url(${bornFireImage})`,
           }}
         >
           <div className="absolute inset-0 bg-black/60" />
         </div>
 
-        {/* Top Right Login */}
-        <nav className="relative z-20 flex justify-end px-4 sm:px-8 py-6">
+        {/* Top Navigation with Logo and Login */}
+        <nav className="relative z-20 flex justify-between items-center px-4 sm:px-8 py-6">
+          <div className="flex items-center gap-3">
+            <img 
+            src={tulsiVillaLogo}
+            className="w-16 h-16 sm:w-16 sm:h-16 rounded-full flex items-center justify-center" alt="Logo" />
+            </div>
           <button
             onClick={() => navigate('/login')}
             className="flex items-center gap-2 px-5 py-3 bg-slate-800/60 backdrop-blur-md rounded-full border border-blue-500/30 hover:bg-slate-700/60 transition-all"
@@ -215,46 +233,71 @@ const HomePage = () => {
           </div>
 
           <div className="space-y-8 sm:space-y-12">
-            <div className={`transform transition-all duration-1000 ${scrollY > 800 ? 'translate-x-0 opacity-100' : '-translate-x-20 opacity-0'}`}>
-              <div className="relative group overflow-hidden rounded-2xl sm:rounded-3xl shadow-2xl border border-blue-500/20 w-full max-w-sm sm:max-w-4xl mx-auto">
-                <div className="absolute top-3 left-3 sm:top-6 sm:left-6 z-10 bg-slate-100/95 backdrop-blur-md rounded-xl sm:rounded-3xl px-4 py-2 sm:px-8 sm:py-4 shadow-xl">
-                  <p className="text-2xl sm:text-5xl font-black text-slate-900 leading-none">20min</p>
-                  <p className="text-xs sm:text-xl font-semibold text-slate-700 mt-0.5 sm:mt-1">From town</p>
-                </div>
-                <img src="https://images.unsplash.com/photo-1529900748604-07564a03e7a6?w=1200&h=700&fit=crop" alt="Arena exterior view" className="w-full h-[200px] sm:h-[500px] object-cover transition-transform duration-700 group-hover:scale-105" />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent"></div>
+            {/* Image 1 - With animated overlay from bottom */}
+            <div className="relative group overflow-hidden rounded-2xl sm:rounded-3xl shadow-2xl border border-blue-500/20 w-full max-w-sm sm:max-w-4xl mx-auto">
+              <img src={bornFireImage} alt="Arena exterior view" className="w-full h-[200px] sm:h-[500px] object-cover transition-transform duration-700 group-hover:scale-105" />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent"></div>
+              
+              {/* Animated overlay from bottom */}
+              <div className={`absolute top-3 left-3 sm:top-6 sm:left-6 z-10 bg-slate-100/95 backdrop-blur-md rounded-xl sm:rounded-3xl px-4 py-2 sm:px-8 sm:py-4 shadow-xl transform transition-all duration-1000 ${scrollY > 800 ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
+                <p className="text-2xl sm:text-5xl font-black text-slate-900 leading-none">20min</p>
+                <p className="text-xs sm:text-xl font-semibold text-slate-700 mt-0.5 sm:mt-1">From town</p>
               </div>
             </div>
 
+            {/* Image 2 - Slide from left */}
             <div className={`transform transition-all duration-1000 ${scrollY > 1000 ? 'translate-x-0 opacity-100' : '-translate-x-20 opacity-0'}`}>
               <div className="relative group overflow-hidden rounded-2xl sm:rounded-3xl shadow-2xl border border-blue-500/20 w-full max-w-[250px] sm:max-w-md">
-                <img src="https://images.unsplash.com/photo-1575361204480-aadea25e6e68?w=600&h=900&fit=crop" alt="Arena night view" className="w-full h-[350px] sm:h-[600px] object-cover transition-transform duration-700 group-hover:scale-105" />
+                <img src={eveneVenueImage} alt="Arena night view" className="w-full h-[350px] sm:h-[600px] object-cover transition-transform duration-700 group-hover:scale-105" />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent"></div>
               </div>
             </div>
 
-            <div className={`transform transition-all duration-1000 ${scrollY > 1200 ? 'translate-x-0 opacity-100' : 'translate-x-20 opacity-0'}`}>
-              <div className="relative group overflow-hidden rounded-2xl sm:rounded-3xl shadow-2xl border border-blue-500/20 w-full max-w-sm sm:max-w-4xl ml-auto">
-                <img src="https://images.unsplash.com/photo-1587280501635-68a0e82cd5ff?w=1200&h=700&fit=crop" alt="Arena interior facilities" className="w-full h-[200px] sm:h-[500px] object-cover transition-transform duration-700 group-hover:scale-105" />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent"></div>
+            {/* Image 3 - With animated overlay from bottom, image slides from right */}
+            <div className="relative group overflow-hidden rounded-2xl sm:rounded-3xl shadow-2xl border border-blue-500/20 w-full max-w-sm sm:max-w-4xl ml-auto">
+              <img src={tulsiVillaImage} alt="Arena interior facilities" className="w-full h-[200px] sm:h-[500px] object-cover transition-transform duration-700 group-hover:scale-105" />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent"></div>
+              
+              {/* Animated overlay from bottom */}
+              <div className={`absolute top-3 left-3 sm:top-6 sm:left-6 z-10 bg-slate-100/95 backdrop-blur-md rounded-xl sm:rounded-3xl px-4 py-2 sm:px-8 sm:py-4 shadow-xl transform transition-all duration-1000 delay-300 ${scrollY > 1200 ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
+                <p className="text-2xl sm:text-5xl font-black text-slate-900 leading-none">Private Villa</p>
+                <p className="text-xs sm:text-xl font-semibold text-slate-700 mt-0.5 sm:mt-1">Airbnb Rental</p>
               </div>
             </div>
 
+            {/* Grid images - Slide from left and right */}
             <div className={`grid grid-cols-2 gap-3 sm:gap-6 transform transition-all duration-1000 ${scrollY > 1400 ? 'translate-y-0 opacity-100' : 'translate-y-20 opacity-0'}`}>
-              <div className="relative group overflow-hidden rounded-xl sm:rounded-3xl shadow-2xl border border-blue-500/20">
-                <img src="https://images.unsplash.com/photo-1551958219-acbc608c6377?w=800&h=600&fit=crop" alt="Players in action" className="w-full h-[180px] sm:h-[400px] object-cover transition-transform duration-700 group-hover:scale-105" />
+              <div className={`relative group overflow-hidden rounded-xl sm:rounded-3xl shadow-2xl border border-blue-500/20 transform transition-all duration-1000 ${scrollY > 1400 ? 'translate-x-0 opacity-100' : '-translate-x-20 opacity-0'}`}>
+                <img src={tulsiVillaImage2} alt="Players in action" className="w-full h-[180px] sm:h-[400px] object-cover transition-transform duration-700 group-hover:scale-105" />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent"></div>
               </div>
-              <div className="relative group overflow-hidden rounded-xl sm:rounded-3xl shadow-2xl border border-blue-500/20">
-                <img src="https://images.unsplash.com/photo-1624880357913-a8539238245b?w=800&h=600&fit=crop" alt="Arena facilities" className="w-full h-[180px] sm:h-[400px] object-cover transition-transform duration-700 group-hover:scale-105" />
+              <div className={`relative group overflow-hidden rounded-xl sm:rounded-3xl shadow-2xl border border-blue-500/20 transform transition-all duration-1000 ${scrollY > 1400 ? 'translate-x-0 opacity-100' : 'translate-x-20 opacity-0'}`}>
+                <img src={villaPartyImage} alt="Arena facilities" className="w-full h-[180px] sm:h-[400px] object-cover transition-transform duration-700 group-hover:scale-105" />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent"></div>
               </div>
             </div>
 
-            <div className={`transform transition-all duration-1000 ${scrollY > 1600 ? 'translate-y-0 opacity-100' : 'translate-y-20 opacity-0'}`}>
-              <div className="relative group overflow-hidden rounded-2xl sm:rounded-3xl shadow-2xl border border-blue-500/20 w-full max-w-[250px] sm:max-w-md mx-auto">
-                <img src="https://images.unsplash.com/photo-1459865264687-595d652de67e?w=600&h=900&fit=crop" alt="Arena ambiance" className="w-full h-[350px] sm:h-[600px] object-cover transition-transform duration-700 group-hover:scale-105" />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent"></div>
+            {/* Image 4 - FUTSAL with animated overlay from bottom */}
+            <div className="relative group overflow-hidden rounded-2xl sm:rounded-3xl shadow-2xl border border-blue-500/20 w-full max-w-[250px] sm:max-w-md mx-auto">
+              <img src="https://images.unsplash.com/photo-1459865264687-595d652de67e?w=600&h=900&fit=crop" alt="FUTSAL Turf" className="w-full h-[350px] sm:h-[600px] object-cover transition-transform duration-700 group-hover:scale-105" />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent"></div>
+              
+              {/* Animated overlay from bottom */}
+              <div className={`absolute top-3 left-3 sm:top-6 sm:left-6 z-10 bg-slate-100/95 backdrop-blur-md rounded-xl sm:rounded-3xl px-4 py-2 sm:px-8 sm:py-4 shadow-xl transform transition-all duration-1000 delay-200 ${scrollY > 1600 ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
+                <p className="text-2xl sm:text-5xl font-black text-slate-900 leading-none">FIFA Approved</p>
+                <p className="text-xs sm:text-xl font-semibold text-slate-700 mt-0.5 sm:mt-1">FUTSAL Turf</p>
+              </div>
+            </div>
+
+            {/* Image 5 - Box Cricket with animated overlay from bottom - FULL WIDTH */}
+            <div className="relative group overflow-hidden rounded-2xl sm:rounded-3xl shadow-2xl border border-blue-500/20 w-full max-w-sm sm:max-w-4xl mx-auto">
+              <img src="https://images.unsplash.com/photo-1761757106344-441482b56693?w=1200&h=700&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8Ym94JTIwY3JpY2tldHxlbnwwfHwwfHx8MA%3D%3D" alt="Box Cricket" className="w-full h-[200px] sm:h-[500px] object-cover transition-transform duration-700 group-hover:scale-105" />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent"></div>
+              
+              {/* Animated overlay from bottom */}
+              <div className={`absolute top-3 left-3 sm:top-6 sm:left-6 z-10 bg-slate-100/95 backdrop-blur-md rounded-xl sm:rounded-3xl px-4 py-2 sm:px-8 sm:py-4 shadow-xl transform transition-all duration-1000 delay-300 ${scrollY > 1800 ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
+                <p className="text-2xl sm:text-5xl font-black text-slate-900 leading-none">Box Cricket</p>
+                <p className="text-xs sm:text-xl font-semibold text-slate-700 mt-0.5 sm:mt-1">Play with friends</p>
               </div>
             </div>
           </div>
