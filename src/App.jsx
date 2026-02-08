@@ -6,7 +6,7 @@ import Dashboard from "./components/Dashboard.jsx";
 import AdminDashboard from "./components/AdminDashboard.jsx";
 import Footer from "./components/Footer.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
-import BookingPage from "./components/BookingPage.jsx";
+import ContactUs from "./components/ContactUs.jsx";
 
 const App = () => {
   return (
@@ -15,6 +15,7 @@ const App = () => {
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/contact" element={<ContactUs />} />
         
         {/* Protected User Dashboard */}
         <Route 

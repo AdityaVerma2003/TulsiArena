@@ -1,6 +1,6 @@
-import { User, ArrowUpRight, Star } from 'lucide-react';
+import { User, ArrowUpRight, Star, X } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import bornFireImage from '../assets/bornfire.jpeg';
 import bornFireImage2 from '../assets/bornfire2.jpeg';
 import eveneVenueImage from '../assets/eventvenue.jpeg';
@@ -17,6 +17,18 @@ const HomePage = () => {
   const [loading, setLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [scrollY, setScrollY] = useState(0);
+
+  // Booking Popup States
+  const [showBookingPopup, setShowBookingPopup] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    eventType: '',
+    maxPersons: '',
+    contactNumber: ''
+  });
+  const [formErrors, setFormErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
 
   // Loading images - luxury villas and resorts
   const loadingImages = [
@@ -65,6 +77,123 @@ const HomePage = () => {
 
   const [currentReview, setCurrentReview] = useState(0);
 
+  // Validation function
+  const validateForm = () => {
+    const errors = {};
+    
+    // Name validation
+    if (!formData.name.trim()) {
+      errors.name = 'Name is required';
+    } else if (formData.name.trim().length < 3) {
+      errors.name = 'Name must be at least 3 characters';
+    } else if (!/^[a-zA-Z\s]+$/.test(formData.name.trim())) {
+      errors.name = 'Name should only contain letters';
+    }
+    
+    // Event type validation
+    if (!formData.eventType) {
+      errors.eventType = 'Event type is required';
+    }
+    
+    // Max persons validation
+    if (!formData.maxPersons) {
+      errors.maxPersons = 'Number of guests is required';
+    } else if (formData.maxPersons < 1) {
+      errors.maxPersons = 'Must be at least 1 guest';
+    } else if (formData.maxPersons > 1000) {
+      errors.maxPersons = 'Maximum 1000 guests allowed';
+    }
+    
+    // Contact number validation (Indian format)
+    const phoneRegex = /^[6-9]\d{9}$/;
+    if (!formData.contactNumber.trim()) {
+      errors.contactNumber = 'Contact number is required';
+    } else if (!phoneRegex.test(formData.contactNumber.trim())) {
+      errors.contactNumber = 'Enter valid 10-digit number (starting with 6-9)';
+    }
+    
+    return errors;
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    
+    // For contact number, only allow digits
+    if (name === 'contactNumber') {
+      const digitsOnly = value.replace(/\D/g, '').slice(0, 10);
+      setFormData(prev => ({
+        ...prev,
+        [name]: digitsOnly
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
+    
+    // Clear error for this field when user starts typing
+    if (formErrors[name]) {
+      setFormErrors(prev => ({
+        ...prev,
+        [name]: ''
+      }));
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    // Validate form
+    const errors = validateForm();
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1500));
+      
+      console.log('Booking submitted:', formData);
+      
+      setSubmitSuccess(true);
+      
+      // Reset form after 2.5 seconds
+      setTimeout(() => {
+        setShowBookingPopup(false);
+        setSubmitSuccess(false);
+        setFormData({
+          name: '',
+          eventType: '',
+          maxPersons: '',
+          contactNumber: ''
+        });
+        setFormErrors({});
+      }, 2500);
+      
+    } catch (error) {
+      console.error('Error submitting form:', error);
+      setFormErrors({ submit: 'Failed to submit booking. Please try again.' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const closePopup = () => {
+    setShowBookingPopup(false);
+    setFormErrors({});
+    setSubmitSuccess(false);
+    setFormData({
+      name: '',
+      eventType: '',
+      maxPersons: '',
+      contactNumber: ''
+    });
+  };
+
   // Loading animation effect
   useEffect(() => {
     const imageInterval = setInterval(() => {
@@ -99,6 +228,17 @@ const HomePage = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Prevent body scroll when popup is open
+  useEffect(() => {
+    if (showBookingPopup) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [showBookingPopup]);
 
   // Loading Screen - New Design
   if (loading) {
@@ -162,7 +302,7 @@ const HomePage = () => {
             <img 
             onClick={()=>navigate("/")}
             src={tulsiVillaLogo}
-            className="w-16 h-16 sm:w-16 sm:h-16 rounded-full flex items-center justify-center" alt="Logo" />
+            className="w-16 h-16 sm:w-16 sm:h-16 rounded-full flex items-center justify-center cursor-pointer" alt="Logo" />
             </div>
           <button
             onClick={() => navigate('/login')}
@@ -190,7 +330,6 @@ const HomePage = () => {
         </div>
       </div>
 
-      {/* Description Section with Scroll Animation */}
       {/* Description Section */}
       <div id="about-section" className="relative py-20 px-4 sm:px-10 overflow-hidden">
         <div className="max-w-4xl mx-auto text-center">
@@ -221,8 +360,32 @@ const HomePage = () => {
           </span>
           </p>
 
-         
+          {/* Buttons Container with Animation */}
+         {/* Buttons Container with Animation */}
+<div 
+  className={`flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center items-center mt-12 transform transition-all duration-1000 delay-1000
+    ${scrollY > 380 ? 'translate-y-0 opacity-100' : 'translate-y-20 opacity-0'}`}
+>
+  {/* Public Pool Button */}
+  <Link 
+    to="/register" 
+    className="group inline-flex items-center gap-3 w-full sm:w-auto justify-center px-8 sm:px-10 py-4 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 hover:from-blue-700 hover:via-purple-700 hover:to-pink-700 text-white font-bold text-base sm:text-lg rounded-full shadow-2xl transition-all duration-300 hover:scale-105 hover:shadow-blue-500/50"
+  >
+    <span>Tulsi Villa Public Pool</span>
+    <ArrowUpRight size={20} className="transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-1" />
+  </Link>
 
+  {/* Private Pool Button - WhatsApp */}
+  <a 
+    href="https://wa.me/918368446067?text=Hi,%20I%20would%20like%20to%20book%20the%20Tulsi%20Villa%20Private%20Pool"
+    target="_blank"
+    rel="noopener noreferrer" 
+    className="group inline-flex items-center gap-3 w-full sm:w-auto justify-center px-8 sm:px-10 py-4 bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 hover:from-green-700 hover:via-emerald-700 hover:to-teal-700 text-white font-bold text-base sm:text-lg rounded-full shadow-2xl transition-all duration-300 hover:scale-105 hover:shadow-green-500/50"
+  >
+    <span>Tulsi Villa Private Pool</span>
+    <ArrowUpRight size={20} className="transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-1" />
+  </a>
+</div>
         </div>
       </div>
 
@@ -342,16 +505,175 @@ const HomePage = () => {
         </div>
       </div>
 
-      {/* Final CTA */}
+      {/* Final CTA - Book Venue */}
       <div className="relative py-6 px-4 text-center">
         <div className={`transform transition-all duration-1000 ${scrollY > 2000 ? 'translate-y-0 opacity-100' : 'translate-y-20 opacity-0'}`}>
-          <h3 className="text-3xl sm:text-4xl font-bold text-white mb-8">Book Your Visit Now</h3>
-          <a href="https://www.airbnb.co.in/rooms/1357826579917889814?source_impression_id=p3_1765883001_P3Oh8rYQCabOHF0f" target="_blank" rel="noopener noreferrer" className="group inline-flex items-center gap-3 mx-auto w-fit px-10 sm:px-12 py-4 sm:py-5 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 hover:from-blue-700 hover:via-purple-700 hover:to-pink-700 text-white font-bold text-lg sm:text-xl rounded-full shadow-2xl transition-all duration-300 hover:scale-105 hover:shadow-blue-500/50">
-            <span>Book Now</span>
+          <h3 className="text-3xl sm:text-4xl font-bold text-white mb-8">Book Your Venue Now</h3>
+          <button 
+            onClick={() => setShowBookingPopup(true)}
+            className="group inline-flex items-center gap-3 mx-auto w-fit px-10 sm:px-12 py-4 sm:py-5 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 hover:from-blue-700 hover:via-purple-700 hover:to-pink-700 text-white font-bold text-lg sm:text-xl rounded-full shadow-2xl transition-all duration-300 hover:scale-105 hover:shadow-blue-500/50"
+          >
+            <span>Book Venue</span>
             <ArrowUpRight size={22} className="transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-1" />
-          </a>
+          </button>
         </div>
       </div>
+
+      {/* Booking Popup Modal */}
+      {showBookingPopup && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 px-4 animate-fadeIn">
+          <div className="bg-gradient-to-br from-slate-900 to-slate-800 border border-blue-500/30 rounded-3xl shadow-2xl max-w-md w-full p-8 relative animate-slideUp max-h-[90vh] overflow-y-auto">
+            {/* Close Button */}
+            <button
+              onClick={closePopup}
+              className="absolute top-4 right-4 text-slate-400 hover:text-white transition-colors z-10"
+              aria-label="Close"
+            >
+              <X size={24} />
+            </button>
+
+            {/* Success Message */}
+            {submitSuccess ? (
+              <div className="text-center py-8">
+                <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <h3 className="text-2xl font-bold text-white mb-2">Booking Submitted!</h3>
+                <p className="text-slate-300">We'll contact you shortly to confirm your booking.</p>
+              </div>
+            ) : (
+              <>
+                {/* Header */}
+                <div className="text-center mb-6">
+                  <h2 className="text-3xl font-black text-white mb-2">Book Venue</h2>
+                  <p className="text-slate-400">Fill in your details and we'll get back to you</p>
+                </div>
+
+                {/* Form */}
+                <form onSubmit={handleSubmit} className="space-y-5">
+                  {/* Name Field */}
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-300 mb-2">
+                      Full Name <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="name"
+                      value={formData.name}
+                      onChange={handleInputChange}
+                      className={`w-full px-4 py-3 bg-slate-800/50 border ${
+                        formErrors.name ? 'border-red-500' : 'border-blue-500/30'
+                      } rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors`}
+                      placeholder="Enter your full name"
+                    />
+                    {formErrors.name && (
+                      <p className="text-red-400 text-sm mt-1 flex items-center gap-1">
+                        <span>⚠</span> {formErrors.name}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Event Type Field */}
+                <div>
+                    <label className="block text-sm font-semibold text-slate-300 mb-2">
+                      Event Type <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name="eventType"
+                      value={formData.eventType}
+                      onChange={handleInputChange}
+                      className={`w-full px-4 py-3 bg-slate-800/50 border ${
+                        formErrors.eventType ? 'border-red-500' : 'border-blue-500/30'
+                      } rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors`}
+                      placeholder="Enter event type (e.g. Wedding, Party, Sports)"
+                    />
+                    {formErrors.eventType && (
+                      <p className="text-red-400 text-sm mt-1 flex items-center gap-1">
+                        <span>⚠</span> {formErrors.eventType}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Max Persons Field */}
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-300 mb-2">
+                      Number of Guests <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      name="maxPersons"
+                      value={formData.maxPersons}
+                      onChange={handleInputChange}
+                      className={`w-full px-4 py-3 bg-slate-800/50 border ${
+                        formErrors.maxPersons ? 'border-red-500' : 'border-blue-500/30'
+                      } rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors`}
+                      placeholder="Expected number of guests"
+                      min="1"
+                    />
+                    {formErrors.maxPersons && (
+                      <p className="text-red-400 text-sm mt-1 flex items-center gap-1">
+                        <span>⚠</span> {formErrors.maxPersons}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Contact Number Field */}
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-300 mb-2">
+                      Contact Number <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      type="tel"
+                      name="contactNumber"
+                      value={formData.contactNumber}
+                      onChange={handleInputChange}
+                      className={`w-full px-4 py-3 bg-slate-800/50 border ${
+                        formErrors.contactNumber ? 'border-red-500' : 'border-blue-500/30'
+                      } rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors`}
+                      placeholder="10-digit mobile number"
+                      maxLength="10"
+                    />
+                    {formErrors.contactNumber && (
+                      <p className="text-red-400 text-sm mt-1 flex items-center gap-1">
+                        <span>⚠</span> {formErrors.contactNumber}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Submit Error */}
+                  {formErrors.submit && (
+                    <p className="text-red-400 text-sm text-center bg-red-500/10 py-2 px-4 rounded-lg">
+                      {formErrors.submit}
+                    </p>
+                  )}
+
+                  {/* Submit Button */}
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="w-full py-4 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 hover:from-blue-700 hover:via-purple-700 hover:to-pink-700 text-white font-bold text-lg rounded-full shadow-xl transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                  >
+                    {isSubmitting ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Submitting...
+                      </span>
+                    ) : (
+                      'Submit Booking Request'
+                    )}
+                  </button>
+                </form>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <footer className="relative bg-slate-950 border-t border-blue-500/10">
@@ -365,7 +687,7 @@ const HomePage = () => {
             <div className="space-y-6">
               <p onClick={() => { const section = document.getElementById('location-section'); section?.scrollIntoView({ behavior: 'smooth' }); }} className={linkClass}>Gallery</p>
               <p onClick={() => { const section = document.getElementById('reviews-section'); section?.scrollIntoView({ behavior: 'smooth' }); }} className={linkClass}>Reviews</p>
-              <p onClick={() => navigate('/')} className={linkClass}>Contact</p>
+             <p onClick={() => navigate('/contact')} className={linkClass}>Contact</p>
             </div>
           </div>
           <div className="mt-20 text-center text-slate-500 text-sm">
@@ -395,6 +717,26 @@ const HomePage = () => {
           }
         }
 
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+
+        @keyframes slideUp {
+          from {
+            opacity: 0;
+            transform: translateY(50px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
         .animate-fadeInUp {
           animation: fadeInUp 1s ease-out;
         }
@@ -406,7 +748,35 @@ const HomePage = () => {
         .animate-scroll-infinite:hover {
           animation-play-state: paused;
         }
-      `}</style>
+
+        .animate-fadeIn {
+          animation: fadeIn 0.3s ease-out;
+        }
+
+        .animate-slideUp {
+          animation: slideUp 0.4s ease-out;
+        }
+
+        /* Custom scrollbar for popup */
+        .overflow-y-auto::-webkit-scrollbar {
+          width: 8px;
+        }
+
+        .overflow-y-auto::-webkit-scrollbar-track {
+          background: rgba(15, 23, 42, 0.5);
+          border-radius: 10px;
+        }
+
+        .overflow-y-auto::-webkit-scrollbar-thumb {
+          background: rgba(59, 130, 246, 0.5);
+          border-radius: 10px;
+        }
+
+        .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+          background: rgba(59, 130, 246, 0.7);
+        }
+      `}
+      </style>
     </div>
   );
 };

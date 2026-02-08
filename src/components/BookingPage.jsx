@@ -4,9 +4,11 @@ import {
     Plus, Minus, Timer
 } from 'lucide-react'; 
 
+import toast, { Toaster } from 'react-hot-toast';
+
 const API_URL = import.meta.env.VITE_API_URL; 
 
-// --- Utility Functions (No Change) ---
+// --- Utility Functions ---
 
 const timeToMinutes = (timeStr) => {
     const [time, period] = timeStr.trim().split(' ');
@@ -22,6 +24,16 @@ const minutesToTime = (minutes) => {
     const period = hours >= 12 ? 'PM' : 'AM';
     const displayHours = hours > 12 ? hours - 12 : hours === 0 ? 12 : hours;
     return `${displayHours}:${mins.toString().padStart(2, '0')} ${period}`;
+};
+
+// 🚀 NEW: Generate 3-hour pool slots
+const generatePoolTimeSlots = () => {
+    return [
+        '9:00 AM - 12:00 PM',
+        '12:00 PM - 3:00 PM',
+        '3:00 PM - 6:00 PM',
+        '6:00 PM - 9:00 PM'
+    ];
 };
 
 const generateTimeSlots = (startHour, endHour, slotDurationMinutes, gapMinutes) => {
@@ -55,23 +67,20 @@ const getNextHourSlot = (currentSlot) => {
 const getPoolEndTime = (currentSlot) => {
     if (!currentSlot) return null;
     const [, endTimeStr] = currentSlot.split(' - ');
-    const endTimeMinutes = timeToMinutes(endTimeStr);
-    
-    const finalEndTimeMinutes = endTimeMinutes + 180; 
-    
-    return minutesToTime(finalEndTimeMinutes);
+    return endTimeStr; // For 3-hour slots, the end time is already in the slot
 }
 
 // Time Slot Configuration 
 const TURF_SLOTS = generateTimeSlots(6, 24, 60, 5);
-const DEFAULT_POOL_SLOT_FOR_API = '9:00 AM - 10:00 AM';
+const POOL_SLOTS = generatePoolTimeSlots(); // 🚀 NEW: 3-hour pool slots
+const DEFAULT_POOL_SLOT_FOR_API = '9:00 AM - 12:00 PM';
 
 // Helper to get today's date string
 const getTodayDateString = () => {
     return new Date().toISOString().split('T')[0];
 };
 
-// --- Sub Component: Date Selector UI (No Change) ---
+// --- Sub Component: Date Selector UI ---
 const DateSelector = ({ selectedDate, setSelectedDate }) => {
     const todayString = useMemo(getTodayDateString, []);
 
@@ -125,12 +134,9 @@ const DateSelector = ({ selectedDate, setSelectedDate }) => {
 };
 
 // --- Sub Component: Time Slot Selector UI ---
-// 🚀 UPDATED PROP: existingBookings is replaced by blockedSlots
 const TimeSlotSelector = ({ date, selectedSlots, setSelectedSlots, facilityType, blockedSlots, slots }) => {
 
-    // 🚀 UPDATED LOGIC: Check against the master list of all blocked slots
     const isSlotBooked = useCallback((slot) => {
-        // blockedSlots now contains all timeSlots booked by Turf or Combo on this date
         return blockedSlots.includes(slot);
     }, [blockedSlots]);
 
@@ -146,37 +152,30 @@ const TimeSlotSelector = ({ date, selectedSlots, setSelectedSlots, facilityType,
         const startTimeStr = slot.split(' - ')[0];
         const slotStartMinutes = timeToMinutes(startTimeStr);
 
-        const SLOT_START_THRESHOLD = slotStartMinutes;
-
-        // Slot is in the past if its start time is more than 5 minutes ago.
-        return SLOT_START_THRESHOLD < nowMinutes - 5; 
+        return slotStartMinutes < nowMinutes - 5; 
         
     }, [date]);
 
- const handleSlotToggle = useCallback(
-  (slot) => {
-    const isSingleSelect = facilityType === 'combo' || facilityType === 'pool';
+    const handleSlotToggle = useCallback(
+        (slot) => {
+            const isSingleSelect = facilityType === 'combo' || facilityType === 'pool';
 
-    if (isSingleSelect) {
-      // keep single selection
-      const isCurrentlySelected = selectedSlots.includes(slot);
-      setSelectedSlots(isCurrentlySelected ? [] : [slot]);
-      return;
-    }
+            if (isSingleSelect) {
+                const isCurrentlySelected = selectedSlots.includes(slot);
+                setSelectedSlots(isCurrentlySelected ? [] : [slot]);
+                return;
+            }
 
-    // MULTIPLE SELECTION FOR TURF
-    const isSelected = selectedSlots.includes(slot);
+            const isSelected = selectedSlots.includes(slot);
 
-    if (isSelected) {
-      // remove slot from list
-      setSelectedSlots(selectedSlots.filter((s) => s !== slot));
-    } else {
-      // add slot to list
-      setSelectedSlots([...selectedSlots, slot]);
-    }
-  },
-  [setSelectedSlots, selectedSlots, facilityType]
-);
+            if (isSelected) {
+                setSelectedSlots(selectedSlots.filter((s) => s !== slot));
+            } else {
+                setSelectedSlots([...selectedSlots, slot]);
+            }
+        },
+        [setSelectedSlots, selectedSlots, facilityType]
+    );
 
     if (!date) {
         return (
@@ -189,34 +188,31 @@ const TimeSlotSelector = ({ date, selectedSlots, setSelectedSlots, facilityType,
     const currentSelectedSlots = Array.isArray(selectedSlots) ? selectedSlots : [];
 
     return (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 max-h-72 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-blue-600 scrollbar-track-slate-800">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-72 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-blue-600 scrollbar-track-slate-800">
             {slots.map((slot) => {
                 const isBooked = isSlotBooked(slot);
                 const isInPast = isSlotInPast(slot);
                 const isSelected = currentSelectedSlots.includes(slot);
 
-                // Blocking logic depends on facility type
                 let isDisabled = isBooked || isInPast;
                 let blockReason = isBooked ? 'Booked' : isInPast ? 'Time Passed' : '';
 
                 if (facilityType === 'combo' && !isDisabled) {
-                    // Combo: If the current slot isn't blocked, check the next hour slot
                     const nextHourSlotBooked = isSlotBooked(getNextHourSlot(slot)); 
                     if (nextHourSlotBooked) {
                          isDisabled = true;
                          blockReason = 'Pool Time Blocked';
                     }
                 }
-                
-                // Pool and Turf only require the current 1-hour slot to be free (which is handled by isBooked).
 
                 return (
                     <button
                         key={slot}
+                        type="button"
                         onClick={() => handleSlotToggle(slot)} 
                         disabled={isDisabled}
                         className={`
-                            p-3 rounded-xl font-semibold transition-all duration-150 text-sm h-16 flex flex-col items-center justify-center text-center relative
+                            p-4 rounded-xl font-semibold transition-all duration-150 text-base h-20 flex flex-col items-center justify-center text-center relative
                             ${isDisabled
                                 ? 'bg-slate-800 text-slate-500 cursor-not-allowed line-through'
                                 : isSelected 
@@ -226,13 +222,11 @@ const TimeSlotSelector = ({ date, selectedSlots, setSelectedSlots, facilityType,
                         `}
                     >
                         {isDisabled ? blockReason : slot}
-                        {/* Indicate reason for blocking the slot */}
                         {facilityType === 'combo' && blockReason === 'Pool Time Blocked' && (
                             <span className='absolute bottom-1 text-[10px] font-medium text-red-300/80'>
                                 {blockReason}
                             </span>
                         )}
-                        {/* Pool 3-Hour Display (Visual hint) */}
                         {facilityType === 'pool' && !isDisabled && (
                              <span className='absolute bottom-1 text-[10px] font-medium text-blue-300/80'>
                                 3-Hour Access
@@ -247,11 +241,10 @@ const TimeSlotSelector = ({ date, selectedSlots, setSelectedSlots, facilityType,
 
 // --- Booking Page Component ---
 const BookingPage = ({ facility, setBookings, onClose }) => {
-    // 🚀 UPDATED: We only need to store the array of all blocked slots
     const [blockedSlots, setBlockedSlots] = useState([]);
     if (!setBookings) setBookings = () => { };
 
-// --- Configuration Hook based on Facility Type ---
+    // 🚀 UPDATED: Pool configuration with max 20 persons and 3-hour slots
     const facilityConfig = useMemo(() => {
         const baseConfig = {
             maxPersons: 4,
@@ -261,7 +254,7 @@ const BookingPage = ({ facility, setBookings, onClose }) => {
             costLabel: 'Additional Player Cost',
             initialCount: 0,
             slots: TURF_SLOTS,
-            allowMultipleSlots: true, // 🚀 NEW: Allow multiple slot selection for turf
+            allowMultipleSlots: true,
         };
 
         if (facility.type === "turf") {
@@ -271,25 +264,24 @@ const BookingPage = ({ facility, setBookings, onClose }) => {
                 ...baseConfig, 
                 type: 'Turf + Pool (1hr + 1hr)', 
                 slots: TURF_SLOTS,
-                allowMultipleSlots: false, // Combo still single slot
+                allowMultipleSlots: false,
             };
         } else if (facility.type === "pool") {
             return {
                 type: 'Pool (3-Hour Access)',
-                maxPersons: 4,
+                maxPersons: 20, // 🚀 UPDATED: Max 20 persons
                 isPerPerson: true, 
                 costPerUnit: facility.price, 
-                slots: TURF_SLOTS, 
-                playerLabel: 'Number of Persons (Max 4)',
+                slots: POOL_SLOTS, // 🚀 UPDATED: Using 3-hour pool slots
+                playerLabel: 'Number of Persons (Max 20)', // 🚀 UPDATED
                 costLabel: 'Per Person Cost',
                 initialCount: 1,
-                allowMultipleSlots: false, // Pool still single slot
+                allowMultipleSlots: false,
             };
         }
         return { ...baseConfig, type: 'Default', slots: TURF_SLOTS };
     }, [facility.type, facility.price]);
 
-    // --- State Initialization (No Change) ---
     const [formData, setFormData] = useState({
         date: '',
         timeSlots: [], 
@@ -298,7 +290,6 @@ const BookingPage = ({ facility, setBookings, onClose }) => {
 
     const [message, setMessage] = useState('');
 
-    // Reset personsCount/timeSlots when facility type changes
     useEffect(() => {
         setFormData(prev => ({
             ...prev,
@@ -307,12 +298,10 @@ const BookingPage = ({ facility, setBookings, onClose }) => {
         }));
     }, [facilityConfig.initialCount, facility.type]);
 
-    // Update time slot selection handler
     const handleTimeSlotsSelect = useCallback((updatedSlots) => {
         setFormData(prev => ({ ...prev, timeSlots: updatedSlots }));
     }, []);
 
-    // Update date selection handler
     const handleDateSelect = useCallback((date) => {
         setFormData(prev => ({
             ...prev,
@@ -323,7 +312,6 @@ const BookingPage = ({ facility, setBookings, onClose }) => {
 
     const PRICE_PER_SLOT = facility.price || 0;
 
-    // --- Calculated Price & Breakdown (No Change) ---
     const totalPrice = useMemo(() => {
         const { isPerPerson, costPerUnit } = facilityConfig;
         
@@ -339,7 +327,6 @@ const BookingPage = ({ facility, setBookings, onClose }) => {
         }
     }, [formData.timeSlots, formData.personsCount, PRICE_PER_SLOT, facilityConfig]);
     
-    // --- Handler for Person Counter (No Change) ---
     const handlePersonChange = useCallback((change) => {
         setFormData(prev => {
             const newCount = prev.personsCount + change;
@@ -356,13 +343,11 @@ const BookingPage = ({ facility, setBookings, onClose }) => {
     const incrementPerson = () => handlePersonChange(1);
     const decrementPerson = () => handlePersonChange(-1);
     
-    // --- Fetch Booked Slots (UPDATED LOGIC) ---
- const fetchBookedSlots = async () => {
+    const fetchBookedSlots = async () => {
         try {
             const token = localStorage.getItem("token");
             if (!token || !formData.date) return;
             
-            // 🚀 NEW ROUTE CALL
             const res = await fetch(`${API_URL}/api/bookings/by-date?date=${formData.date}`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
@@ -373,10 +358,7 @@ const BookingPage = ({ facility, setBookings, onClose }) => {
                 return;
             }
 
-            // Extract all unique time slots from the fetched bookings
             const allBlockedSlots = data.bookings.flatMap((b) => b.timeSlots);
-            
-            // Set the master blocked list
             setBlockedSlots(Array.from(new Set(allBlockedSlots))); 
 
         } catch (err) {
@@ -390,77 +372,79 @@ const BookingPage = ({ facility, setBookings, onClose }) => {
         fetchBookedSlots();
     }, [formData.date, facility]);
 
+   const handleSubmit = async (e) => {
+    e.preventDefault();
 
-    // --- Submission Logic (No Change) ---
-    const handleSubmit = async (e) => {
-        e.preventDefault();
+    try {
+        if (!facility) return toast.error("Please select a facility first.");
+        if (!formData.date) return toast.error("Please select a date.");
+        
+        let finalTimeSlots = formData.timeSlots;
 
-        try {
-            if (!facility) return alert("Please select a facility first.");
-            if (!formData.date) return alert("Please select a date.");
-            
-            let finalTimeSlots = formData.timeSlots;
-
-            if (formData.timeSlots?.length === 0) {
-                 return alert("Please select a time slot.");
-            }
-
-            // COMBO LOGIC: Prepare 2 slots for the API payload
-            if (facility.type === 'combo' && formData.timeSlots.length === 1) {
-                const turfSlot = formData.timeSlots[0];
-                const poolSlot = getNextHourSlot(turfSlot);
-                finalTimeSlots = [turfSlot, poolSlot];
-            }
-            
-            if (facility.type === 'pool' && formData.personsCount < 1) {
-                return alert("Please select at least 1 person for pool booking.");
-            }
-            
-            const token = localStorage.getItem("token");
-            if (!token) return alert("Please login first.");
-
-            const payload = {
-                facilityName: facility.name,
-                facilityType: facility.type,
-                date: formData.date,
-                timeSlots: finalTimeSlots, 
-                additionalPlayers: formData.personsCount || 0,
-                basePrice: facility.price,
-            };
-
-            const res = await fetch(`${API_URL}/api/bookings/`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify(payload),
-            });
-
-            const data = await res.json();
-
-            if (!res.ok) {
-                alert(data.message || "Booking failed");
-                return;
-            }
-
-            alert(`Booking successful!`);
-
-            setFormData({
-                date: "",
-                timeSlots: [],
-                personsCount: facilityConfig.initialCount,
-            });
-
-            onClose();
-
-        } catch (error) {
-            console.error("Submit Error:", error);
-            alert("Something went wrong while creating the booking.");
+        if (formData.timeSlots?.length === 0) {
+             return toast.error("Please select a time slot.");
         }
-    };
 
-    // --- JSX Rendering Helpers (Passing blockedSlots to TimeSlotSelector) ---
+        if (facility.type === 'combo' && formData.timeSlots.length === 1) {
+            const turfSlot = formData.timeSlots[0];
+            const poolSlot = getNextHourSlot(turfSlot);
+            finalTimeSlots = [turfSlot, poolSlot];
+        }
+        
+        if (facility.type === 'pool' && formData.personsCount < 1) {
+            return toast.error("Please select at least 1 person for pool booking.");
+        }
+        
+        const token = localStorage.getItem("token");
+        if (!token) return toast.error("Please login first.");
+
+        const payload = {
+            facilityName: facility.name,
+            facilityType: facility.type,
+            date: formData.date,
+            timeSlots: finalTimeSlots, 
+            additionalPlayers: formData.personsCount || 0,
+            basePrice: facility.price,
+        };
+
+        const loadingToast = toast.loading("Creating your booking...");
+
+        const res = await fetch(`${API_URL}/api/bookings/`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify(payload),
+        });
+
+        const data = await res.json();
+        toast.dismiss(loadingToast); 
+
+        if (!res.ok) {
+            toast.error(data.message || "Booking failed");
+            return;
+        }
+
+        toast.success(`Booking successful!`);
+
+        setFormData({
+            date: "",
+            timeSlots: [],
+            personsCount: facilityConfig.initialCount,
+        });
+
+        // Delay closing slightly so user can actually see the success toast
+        setTimeout(() => {
+            onClose();
+        }, 1500);
+
+    } catch (error) {
+        console.error("Submit Error:", error);
+        toast.error("Something went wrong while creating the booking.");
+    }
+};
+
     const { maxPersons, playerLabel, costLabel, isPerPerson, costPerUnit, slots } = facilityConfig;
     const personsCount = formData.personsCount;
     const minPersons = isPerPerson ? 1 : 0;
@@ -469,7 +453,6 @@ const BookingPage = ({ facility, setBookings, onClose }) => {
     const slotCount = isPerPerson ? 1 : formData.timeSlots.length;
     const currentBaseCost = PRICE_PER_SLOT * slotCount;
 
-    // Calculate the breakdown for Combo
     const comboBreakdown = useMemo(() => {
         if (isCombo && formData.timeSlots.length === 1) {
             const turfSlot = formData.timeSlots[0];
@@ -483,7 +466,6 @@ const BookingPage = ({ facility, setBookings, onClose }) => {
         return null;
     }, [isCombo, formData.timeSlots]);
 
-    // Calculate the 3-hour Pool end time for display
     const poolAccessTime = useMemo(() => {
         if (isPool && formData.timeSlots.length === 1) {
             const selectedSlot = formData.timeSlots[0];
@@ -495,168 +477,142 @@ const BookingPage = ({ facility, setBookings, onClose }) => {
 
 
     return (
-        <div className="bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg md:max-w-xl lg:max-w-2xl max-h-[90vh] overflow-y-auto relative p-6 sm:p-8 border border-blue-500/20">
+        <>
+            <Toaster position="top-right" reverseOrder={false} />
+            <div className="bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg md:max-w-xl lg:max-w-2xl max-h-[90vh] overflow-y-auto relative p-6 sm:p-8 border border-blue-500/20">
 
-            {/* Close Button & Header */}
-            <button
-                onClick={onClose}
-                className="absolute top-4 right-4 p-2 rounded-full bg-slate-700/50 text-white hover:bg-red-600 transition"
-                aria-label="Close booking form"
-            >
-                <X size={20} />
-            </button>
+                <button
+                    onClick={onClose}
+                    className="absolute top-4 right-4 p-2 rounded-full bg-slate-700/50 text-white hover:bg-red-600 transition"
+                    aria-label="Close booking form"
+                >
+                    <X size={20} />
+                </button>
 
-            <div className="border-b border-blue-600/30 pb-4 mb-6">
-                <h2 className="text-3xl font-bold mb-1 text-white">Book: {facility.name}</h2>
-                <div className="flex flex-wrap gap-x-4 text-blue-300 text-sm">
-                    <span className="flex items-center gap-1"><Tag size={16} /> {facilityConfig.type}</span>
-                    <span className="flex items-center gap-1 font-bold text-green-400">
-                        <IndianRupee size={16} /> {PRICE_PER_SLOT}
-                        {isPool ? " / Person" : " / Slot (Capacity: " + facility.capacity + ")"}
-                    </span>
-                </div>
-            </div>
-
-            {/* Form Sections */}
-            <div className="space-y-8">
-
-                {/* SECTION 1: Date Selection */}
-                <div>
-                    <h3 className="text-xl font-semibold mb-4 flex items-center gap-3 text-blue-300">
-                        <Calendar size={20} className="text-blue-500" />
-                        1. Select Date
-                    </h3>
-                    <DateSelector
-                        selectedDate={formData.date}
-                        setSelectedDate={handleDateSelect}
-                    />
-                </div>
-
-                {/* SECTION 2: Time Slot Selection */}
-                <div>
-                    <h3 className="text-xl font-semibold mb-4 flex items-center gap-3 text-blue-300">
-                        <Clock size={20} className="text-blue-500" />
-                        2. Select Time Slot
-                        {formData.timeSlots.length > 0 && (
-                            <span className="text-sm font-normal text-green-400">
-                                {isPool ? '(1hr Slot Selected)' : isCombo ? '(1hr Turf Selected)' : `(${formData.timeSlots.length} Selected)`}
-                            </span>
-                        )}
-                    </h3>
-                    <TimeSlotSelector
-                        date={formData.date}
-                        selectedSlots={formData.timeSlots}
-                        setSelectedSlots={handleTimeSlotsSelect}
-                        facilityType={facility.type}
-                        blockedSlots={blockedSlots} // 🚀 PASSING MASTER BLOCKED LIST
-                        slots={slots}
-                    />
-                </div>
-
-                {/* SECTION 3: Additional Options & Players */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Persons Counter */}
-                    <div>
-                        <label className="block text-blue-100 mb-3 font-medium flex items-center gap-2">
-                            <Users size={18} />
-                            {playerLabel}
-                        </label>
-                        <div className="flex items-center justify-between p-4 rounded-xl bg-slate-700/50 border border-blue-500/30">
-                            <span className="text-white text-2xl font-extrabold">{personsCount}</span>
-                            <div className="flex space-x-3">
-                                <button
-                                    onClick={decrementPerson}
-                                    disabled={personsCount <= minPersons}
-                                    className="p-3 bg-red-600/70 hover:bg-red-700 disabled:opacity-30 text-white rounded-lg transition transform hover:scale-110"
-                                >
-                                    <Minus size={20} />
-                                </button>
-                                <button
-                                    onClick={incrementPerson}
-                                    disabled={personsCount >= maxPersons}
-                                    className="p-3 bg-green-600/70 hover:bg-green-700 disabled:opacity-30 text-white rounded-lg transition transform hover:scale-110"
-                                >
-                                    <Plus size={20} />
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* SECTION 4: Price Summary and Action */}
-                <div className="bg-slate-700/50 rounded-xl p-6 border-2 border-green-500/50 space-y-3">
-                    
-                    {/* COMBO BREAKDOWN DISPLAY */}
-                    {comboBreakdown && (
-                        <div className="p-3 mb-3 border border-indigo-500/50 rounded-lg bg-indigo-900/40">
-                            <h4 className="text-lg font-bold text-indigo-300 mb-2 flex items-center gap-2">
-                                <ArrowRightLeft size={20} /> Combo Time Allocation
-                            </h4>
-                            <div className="flex justify-between text-white font-semibold text-base mb-1">
-                                <span className='font-bold text-yellow-300'>Turf:</span>
-                                <span className="text-white">{comboBreakdown.turfSlot}</span>
-                            </div>
-                            <div className="flex justify-between text-white font-semibold text-base">
-                                <span className='font-bold text-teal-300'>Pool:</span>
-                                <span className="text-white">{comboBreakdown.poolSlot}</span>
-                            </div>
-                        </div>
-                    )}
-                    {/* POOL 3-HOUR DISPLAY */}
-                    {isPool && poolAccessTime && (
-                        <div className="p-3 mb-3 border border-blue-500/50 rounded-lg bg-blue-900/40">
-                             <h4 className="text-lg font-bold text-blue-300 mb-2 flex items-center gap-2">
-                                <Timer size={20} /> Pool Access Time
-                            </h4>
-                            <div className="flex justify-between text-white font-semibold text-base">
-                                <span className='font-bold text-blue-300'>Available Until:</span>
-                                <span className="text-white">{poolAccessTime}</span>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Price Details */}
-                    <div className="space-y-1">
-                        {/* Base Price Calculation */}
-                        {!isPool && ( // Turf/Combo
-                            <div className="flex justify-between text-blue-200">
-                                <span>Base Slot Price ({slotCount} x ₹{PRICE_PER_SLOT}):</span>
-                                <span className="font-semibold">₹{currentBaseCost}</span>
-                            </div>
-                        )}
-
-                        <div className="flex justify-between text-blue-200">
-                            <span>{costLabel} (x{personsCount}):</span>
-                            <span className="font-semibold">₹{totalPrice}</span>
-                        </div>
-                    </div>
-
-                    <div className="h-px bg-green-500/30 my-3"></div>
-
-                    <div className="flex justify-between text-white text-2xl font-extrabold items-center">
-                        <span className="flex items-center gap-2">Total Payable</span>
-                        <span className="flex items-center">
-                            <IndianRupee size={22} />{totalPrice}
+                <div className="border-b border-blue-600/30 pb-4 mb-6">
+                    <h2 className="text-3xl font-bold mb-1 text-white">Book: {facility.name}</h2>
+                    <div className="flex flex-wrap gap-x-4 text-blue-300 text-sm">
+                        <span className="flex items-center gap-1"><Tag size={16} /> {facilityConfig.type}</span>
+                        <span className="flex items-center gap-1 font-bold text-green-400">
+                            <IndianRupee size={16} /> {PRICE_PER_SLOT}
+                            {isPool ? " / Person" : " / Slot (Capacity: " + facility.capacity + ")"}
                         </span>
                     </div>
+                </div>
 
-                    {/* Message Area and Submission Button */}
-                    {message && (
-                        <div className="p-3 bg-green-700/30 text-green-300 rounded-lg text-sm text-center font-medium">
-                            {message}
+                <div className="space-y-8">
+                    <div>
+                        <h3 className="text-xl font-semibold mb-4 flex items-center gap-3 text-blue-300">
+                            <Calendar size={20} className="text-blue-500" />
+                            1. Select Date
+                        </h3>
+                        <DateSelector
+                            selectedDate={formData.date}
+                            setSelectedDate={handleDateSelect}
+                        />
+                    </div>
+
+                    <div>
+                        <h3 className="text-xl font-semibold mb-4 flex items-center gap-3 text-blue-300">
+                            <Clock size={20} className="text-blue-500" />
+                            2. Select Time Slot (3-Hour Access)
+                            {formData.timeSlots.length > 0 && (
+                                <span className="text-sm font-normal text-green-400">
+                                    (Selected)
+                                </span>
+                            )}
+                        </h3>
+                        <TimeSlotSelector
+                            date={formData.date}
+                            selectedSlots={formData.timeSlots}
+                            setSelectedSlots={handleTimeSlotsSelect}
+                            facilityType={facility.type}
+                            blockedSlots={blockedSlots}
+                            slots={slots}
+                        />
+                    </div>
+
+                    <div>
+                        <h3 className="text-xl font-semibold mb-4 flex items-center gap-3 text-blue-300">
+                            <Users size={20} className="text-blue-500" />
+                            3. Number of Persons
+                        </h3>
+                        <div>
+                            <label className="block text-blue-100 mb-3 font-medium flex items-center gap-2">
+                                <Users size={18} />
+                                {playerLabel}
+                            </label>
+                            <div className="flex items-center justify-between p-6 rounded-xl bg-slate-700/50 border border-blue-500/30">
+                                <span className="text-white text-3xl font-extrabold">{personsCount}</span>
+                                <div className="flex space-x-3">
+                                    <button
+                                        type="button"
+                                        onClick={decrementPerson}
+                                        disabled={personsCount <= minPersons}
+                                        className="p-3 bg-red-600/70 hover:bg-red-700 disabled:opacity-30 text-white rounded-lg transition transform hover:scale-110"
+                                    >
+                                        <Minus size={24} />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={incrementPerson}
+                                        disabled={personsCount >= maxPersons}
+                                        className="p-3 bg-green-600/70 hover:bg-green-700 disabled:opacity-30 text-white rounded-lg transition transform hover:scale-110"
+                                    >
+                                        <Plus size={24} />
+                                    </button>
+                                </div>
+                            </div>
                         </div>
-                    )}
+                    </div>
 
-                    <button
-                        onClick={handleSubmit}
-                        disabled={!formData.date || formData.timeSlots.length === 0}
-                        className="w-full py-4 mt-4 bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white font-bold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-xl shadow-green-500/30"
-                    >
-                        Confirm Booking
-                    </button>
+                    <div className="bg-slate-700/50 rounded-xl p-6 border-2 border-green-500/50 space-y-3">
+                        {isPool && poolAccessTime && formData.timeSlots.length > 0 && (
+                            <div className="p-4 mb-3 border border-blue-500/50 rounded-lg bg-blue-900/40">
+                                <h4 className="text-lg font-bold text-blue-300 mb-2 flex items-center gap-2">
+                                    <Timer size={20} /> Selected Pool Time
+                                </h4>
+                                <div className="flex justify-between text-white font-semibold text-base">
+                                    <span className='font-bold text-blue-300'>Time Slot:</span>
+                                    <span className="text-white">{formData.timeSlots[0]}</span>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="space-y-2">
+                            <div className="flex justify-between text-blue-200 text-lg">
+                                <span>{costLabel}:</span>
+                                <span className="font-semibold">₹{PRICE_PER_SLOT} × {personsCount}</span>
+                            </div>
+                        </div>
+
+                        <div className="h-px bg-green-500/30 my-3"></div>
+
+                        <div className="flex justify-between text-white text-2xl font-extrabold items-center">
+                            <span className="flex items-center gap-2">Total Payable</span>
+                            <span className="flex items-center">
+                                <IndianRupee size={22} />{totalPrice}
+                            </span>
+                        </div>
+
+                        {message && (
+                            <div className="p-3 bg-green-700/30 text-green-300 rounded-lg text-sm text-center font-medium">
+                                {message}
+                            </div>
+                        )}
+
+                        <button
+                            type="button"
+                            onClick={handleSubmit}
+                            disabled={!formData.date || formData.timeSlots.length === 0}
+                            className="w-full py-4 mt-4 bg-gradient-to-r from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600 text-white font-bold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-xl shadow-green-500/30"
+                        >
+                            Confirm Booking
+                        </button>
+                    </div>
                 </div>
             </div>
-        </div>
+        </>
     );
 };
 
