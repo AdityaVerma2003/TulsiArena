@@ -67,7 +67,7 @@ const Dashboard = () => {
   const turfs = [
     // { id: 1, name: 'Turf', type: 'turf', price: 1200, capacity: 12, image: `https://images.unsplash.com/photo-1671209151455-86980f5bf293?w=900&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTZ8fHR1cmZ8ZW58MHx8MHx8fDA%3D`, available: true },
     // { id: 2, name: 'Turf + Swimming Pool', type: 'combo', price: 1500, capacity: 12, image: 'https://images.unsplash.com/photo-1763479142280-675629f6db27?w=900&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8dHVyZiUyMCUyQiUyMHBvb2x8ZW58MHx8MHx8fDA%3D', available: true },
-    { id: 3, name: 'Swimming Pool', type: 'pool', price: 300, capacity: 20, image: 'https://images.unsplash.com/photo-1576610616656-d3aa5d1f4534?w=900&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8OHx8c3dpbW1pbmclMjBwb29sfGVufDB8fDB8fHww', available: true }
+    { id: 3, name: 'Swimming Pool', type: 'pool', price: 300, capacity: 25, image: 'https://images.unsplash.com/photo-1576610616656-d3aa5d1f4534?w=900&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8OHx8c3dpbW1pbmclMjBwb29sfGVufDB8fDB8fHww', available: true }
   ];
 
   useEffect(() => {

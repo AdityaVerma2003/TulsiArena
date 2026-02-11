@@ -376,7 +376,7 @@ const HomePage = () => {
   </Link>
 
   {/* Private Pool Button - WhatsApp */}
-  <a 
+  <Link 
     href="https://wa.me/918368446067?text=Hi,%20I%20would%20like%20to%20book%20the%20Tulsi%20Villa%20Private%20Pool"
     target="_blank"
     rel="noopener noreferrer" 
@@ -384,7 +384,21 @@ const HomePage = () => {
   >
     <span>Tulsi Villa Private Pool</span>
     <ArrowUpRight size={20} className="transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-1" />
-  </a>
+  </Link>
+
+   <Link 
+            onClick={() => setShowBookingPopup(true)}
+            className="group inline-flex items-center gap-3 w-full sm:w-auto justify-center px-8 sm:px-10 py-4 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 hover:from-blue-700 hover:via-purple-700 hover:to-pink-700 text-white font-bold text-base sm:text-lg rounded-full shadow-2xl transition-all duration-300 hover:scale-105 hover:shadow-blue-500/50"
+          >
+            <span>Book Venue</span>
+            <ArrowUpRight size={22} className="transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-1" />
+          </Link>
+
+           <Link onClick={() => navigate('/register')} 
+          className="group inline-flex items-center gap-3 w-full sm:w-auto justify-center px-8 sm:px-10 py-4 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 hover:from-blue-700 hover:via-purple-700 hover:to-pink-700 text-white font-bold text-base sm:text-lg rounded-full shadow-2xl transition-all duration-300 hover:scale-105 hover:shadow-blue-500/50">
+            <span>Book Your Slot Now</span>
+            <ArrowUpRight size={22} className="transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-1" />
+          </Link>
 </div>
         </div>
       </div>

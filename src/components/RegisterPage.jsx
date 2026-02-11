@@ -82,36 +82,75 @@ const RegisterPage = () => {
 
 
 
-    const handleSubmit = async() => {
-      const allErrors = {};
-      Object.keys(formData).forEach(key => {
-        allErrors[key] = getFieldError(key, formData[key]);
-      });
+   const handleSubmit = async (e) => {
+  e.preventDefault(); // Add this to prevent form default submission
+
+  const allErrors = {};
+  Object.keys(formData).forEach(key => {
+    allErrors[key] = getFieldError(key, formData[key]);
+  });
+  
+  setErrors(allErrors);
+  setTouched({ name: true, email: true, mobile: true, password: true });
+
+  const hasErrors = Object.values(allErrors).some(err => err);
+  if (hasErrors) {
+    setMessage({ type: 'error', text: 'Please correct the errors before submitting' });
+    return;
+  }
+
+  // DON'T set success message here - wait for API response!
+  // setMessage({ type: 'success', text: 'Registration successful! Redirecting...' });
+  
+  try {
+    setMessage({ type: 'info', text: 'Registering...' }); // Optional: show loading state
+    
+    const response = await axios.post(`${API_URL}/api/auth/register`, formData);
+    
+    console.log("response from register", response); // Fixed typo: was 'res', should be 'response'
+    
+    // Check if registration was successful
+    if (response.data.success) {
+      // Store token and role
+      localStorage.setItem('token', response.data.token);
+      localStorage.setItem('role', response.data.user.role);
       
-      setErrors(allErrors);
-      setTouched({ name: true, email: true, mobile: true, password: true });
-
-      const hasErrors = Object.values(allErrors).some(err => err);
-      if (hasErrors) {
-        setMessage({ type: 'error', text: 'Please correct the errors before submitting' });
-        return;
-      }
-
+      // Show success message
       setMessage({ type: 'success', text: 'Registration successful! Redirecting...' });
-      try {
-        const response = await axios.post(`${API_URL}/api/auth/register`, formData);
-        localStorage.setItem('token', response.data.token);
-        localStorage.setItem('role', response.data.user.role);
-        console.log("response from register" , res)
-        if (response.data.success) {
-            navigate('/dashboard');
-        } else {
-          setMessage({ type: 'error', text: response.data.message || 'Registration failed' });
-        }
-      } catch (error) {
-        setMessage({ type: 'error', text: error.response?.data?.message || 'An error occurred during registration' });
-      }
-    };
+      
+      // Navigate to dashboard after a brief delay (optional)
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 1000);
+      
+    } else {
+      setMessage({ type: 'error', text: response.data.message || 'Registration failed' });
+    }
+  } catch (error) {
+    console.error('Registration error:', error);
+    
+    // Handle different error scenarios
+    if (error.response) {
+      // Server responded with error status
+      setMessage({ 
+        type: 'error', 
+        text: error.response.data.message || 'Registration failed' 
+      });
+    } else if (error.request) {
+      // Request was made but no response received
+      setMessage({ 
+        type: 'error', 
+        text: 'No response from server. Please check your connection.' 
+      });
+    } else {
+      // Something else went wrong
+      setMessage({ 
+        type: 'error', 
+        text: 'An error occurred during registration' 
+      });
+    }
+  }
+};
 
     return (
       <div className="relative min-h-screen bg-gradient-to-br from-slate-950 via-blue-950 to-slate-950 overflow-hidden">

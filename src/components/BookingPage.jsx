@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import {
     Calendar, Clock, Users, ArrowRightLeft, Tag, X, IndianRupee,
-    Plus, Minus, Timer
+    Plus, Minus, Timer, AlertCircle
 } from 'lucide-react'; 
 
 import toast, { Toaster } from 'react-hot-toast';
@@ -26,7 +26,7 @@ const minutesToTime = (minutes) => {
     return `${displayHours}:${mins.toString().padStart(2, '0')} ${period}`;
 };
 
-// 🚀 NEW: Generate 3-hour pool slots
+// 🚀 Generate 3-hour pool slots
 const generatePoolTimeSlots = () => {
     return [
         '9:00 AM - 12:00 PM',
@@ -67,13 +67,35 @@ const getNextHourSlot = (currentSlot) => {
 const getPoolEndTime = (currentSlot) => {
     if (!currentSlot) return null;
     const [, endTimeStr] = currentSlot.split(' - ');
-    return endTimeStr; // For 3-hour slots, the end time is already in the slot
+    return endTimeStr;
 }
+
+// 🚀 NEW: Check if current time is past pool booking cutoff (9 PM)
+const isPoolBookingAllowed = () => {
+    const now = new Date();
+    const currentHour = now.getHours();
+    // Allow booking only before 9 PM (21:00)
+    return currentHour < 21;
+};
+
+// 🚀 NEW: Check if a pool slot can still be booked based on current time
+const canBookPoolSlot = (slot) => {
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    
+    // Get slot start time
+    const [startTimeStr] = slot.split(' - ');
+    const slotStartMinutes = timeToMinutes(startTimeStr);
+    
+    // Can book if slot hasn't started yet OR if we're within the slot time
+    // (allowing mid-slot booking)
+    return currentMinutes < slotStartMinutes + 180; // 180 minutes = 3 hours
+};
 
 // Time Slot Configuration 
 const TURF_SLOTS = generateTimeSlots(6, 24, 60, 5);
-const POOL_SLOTS = generatePoolTimeSlots(); // 🚀 NEW: 3-hour pool slots
-const DEFAULT_POOL_SLOT_FOR_API = '9:00 AM - 12:00 PM';
+const POOL_SLOTS = generatePoolTimeSlots();
+const MAX_POOL_CAPACITY = 25; // 🚀 Maximum persons per pool slot
 
 // Helper to get today's date string
 const getTodayDateString = () => {
@@ -134,27 +156,51 @@ const DateSelector = ({ selectedDate, setSelectedDate }) => {
 };
 
 // --- Sub Component: Time Slot Selector UI ---
-const TimeSlotSelector = ({ date, selectedSlots, setSelectedSlots, facilityType, blockedSlots, slots }) => {
+const TimeSlotSelector = ({ 
+    date, 
+    selectedSlots, 
+    setSelectedSlots, 
+    facilityType, 
+    blockedSlots, 
+    slots,
+    poolCapacityData // 🚀 NEW: Pool capacity data
+}) => {
 
     const isSlotBooked = useCallback((slot) => {
         return blockedSlots.includes(slot);
     }, [blockedSlots]);
 
-    const isSlotInPast = useCallback((slot) => {
-        const todayString = getTodayDateString();
-        if (!date || date !== todayString) {
-            return false;
+   const isSlotInPast = useCallback((slot) => {
+    const todayString = getTodayDateString();
+    if (!date || date !== todayString) {
+        return false;
+    }
+
+    const now = new Date();
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+
+    const [, endTimeStr] = slot.split(' - ');
+    const slotEndMinutes = timeToMinutes(endTimeStr);
+
+    return nowMinutes > slotEndMinutes; 
+}, [date]);
+
+    // 🚀 NEW: Get available capacity for a pool slot
+    const getPoolSlotCapacity = useCallback((slot) => {
+        if (facilityType !== 'pool' || !poolCapacityData) {
+            return { available: MAX_POOL_CAPACITY, booked: 0 };
         }
-
-        const now = new Date();
-        const nowMinutes = now.getHours() * 60 + now.getMinutes();
-
-        const startTimeStr = slot.split(' - ')[0];
-        const slotStartMinutes = timeToMinutes(startTimeStr);
-
-        return slotStartMinutes < nowMinutes - 5; 
         
-    }, [date]);
+        const slotData = poolCapacityData[slot];
+        if (!slotData) {
+            return { available: MAX_POOL_CAPACITY, booked: 0 };
+        }
+        
+        return {
+            available: MAX_POOL_CAPACITY - slotData.totalPersons,
+            booked: slotData.totalPersons
+        };
+    }, [facilityType, poolCapacityData]);
 
     const handleSlotToggle = useCallback(
         (slot) => {
@@ -186,6 +232,8 @@ const TimeSlotSelector = ({ date, selectedSlots, setSelectedSlots, facilityType,
     }
 
     const currentSelectedSlots = Array.isArray(selectedSlots) ? selectedSlots : [];
+    const todayString = getTodayDateString();
+    const isToday = date === todayString;
 
     return (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-72 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-blue-600 scrollbar-track-slate-800">
@@ -193,9 +241,29 @@ const TimeSlotSelector = ({ date, selectedSlots, setSelectedSlots, facilityType,
                 const isBooked = isSlotBooked(slot);
                 const isInPast = isSlotInPast(slot);
                 const isSelected = currentSelectedSlots.includes(slot);
+                
+                // 🚀 Pool-specific logic
+                let poolCapacity = null;
+                let isPoolFull = false;
+                let canBookThisPoolSlot = true;
+                
+                if (facilityType === 'pool') {
+                    poolCapacity = getPoolSlotCapacity(slot);
+                    isPoolFull = poolCapacity.available <= 0;
+                    
+                    // Check if booking is allowed based on time
+                    if (isToday) {
+                        canBookThisPoolSlot = canBookPoolSlot(slot);
+                    }
+                }
 
-                let isDisabled = isBooked || isInPast;
-                let blockReason = isBooked ? 'Booked' : isInPast ? 'Time Passed' : '';
+                let isDisabled = isBooked || isInPast || isPoolFull || (facilityType === 'pool' && !canBookThisPoolSlot);
+                let blockReason = '';
+                
+                if (isBooked) blockReason = 'Booked';
+                else if (isInPast) blockReason = 'Time Passed';
+                else if (isPoolFull) blockReason = 'Fully Booked';
+                else if (facilityType === 'pool' && !canBookThisPoolSlot) blockReason = 'Booking Closed';
 
                 if (facilityType === 'combo' && !isDisabled) {
                     const nextHourSlotBooked = isSlotBooked(getNextHourSlot(slot)); 
@@ -209,10 +277,10 @@ const TimeSlotSelector = ({ date, selectedSlots, setSelectedSlots, facilityType,
                     <button
                         key={slot}
                         type="button"
-                        onClick={() => handleSlotToggle(slot)} 
+                        onClick={() => !isDisabled && handleSlotToggle(slot)} 
                         disabled={isDisabled}
                         className={`
-                            p-4 rounded-xl font-semibold transition-all duration-150 text-base h-20 flex flex-col items-center justify-center text-center relative
+                            p-4 rounded-xl font-semibold transition-all duration-150 text-base min-h-[100px] flex flex-col items-center justify-center text-center relative
                             ${isDisabled
                                 ? 'bg-slate-800 text-slate-500 cursor-not-allowed line-through'
                                 : isSelected 
@@ -221,15 +289,45 @@ const TimeSlotSelector = ({ date, selectedSlots, setSelectedSlots, facilityType,
                             }
                         `}
                     >
-                        {isDisabled ? blockReason : slot}
-                        {facilityType === 'combo' && blockReason === 'Pool Time Blocked' && (
-                            <span className='absolute bottom-1 text-[10px] font-medium text-red-300/80'>
+                        {/* Slot time display */}
+                        <span className={`${isDisabled ? 'line-through' : ''}`}>
+                            {slot}
+                        </span>
+                        
+                        {/* 🚀 Pool capacity indicator */}
+                        {facilityType === 'pool' && poolCapacity && !isDisabled && (
+                            <div className="mt-2 text-xs">
+                                <div className={`font-bold ${
+                                    poolCapacity.available <= 5 ? 'text-orange-300' : 'text-green-300'
+                                }`}>
+                                    {poolCapacity.available} / {MAX_POOL_CAPACITY} Available
+                                </div>
+                                {poolCapacity.booked > 0 && (
+                                    <div className="text-slate-300 text-[10px]">
+                                        ({poolCapacity.booked} booked)
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                        
+                        {/* Disabled reason display */}
+                        {isDisabled && blockReason && (
+                            <span className='absolute bottom-2 text-[11px] font-medium text-red-300/80'>
                                 {blockReason}
                             </span>
                         )}
-                        {facilityType === 'pool' && !isDisabled && (
+                        
+                        {/* 3-Hour Access label for pool */}
+                        {facilityType === 'pool' && !isDisabled && !poolCapacity && (
                              <span className='absolute bottom-1 text-[10px] font-medium text-blue-300/80'>
                                 3-Hour Access
+                            </span>
+                        )}
+                        
+                        {/* Combo pool time blocked indicator */}
+                        {facilityType === 'combo' && blockReason === 'Pool Time Blocked' && (
+                            <span className='absolute bottom-1 text-[10px] font-medium text-red-300/80'>
+                                {blockReason}
                             </span>
                         )}
                     </button>
@@ -242,9 +340,11 @@ const TimeSlotSelector = ({ date, selectedSlots, setSelectedSlots, facilityType,
 // --- Booking Page Component ---
 const BookingPage = ({ facility, setBookings, onClose }) => {
     const [blockedSlots, setBlockedSlots] = useState([]);
+    const [poolCapacityData, setPoolCapacityData] = useState({}); // 🚀 NEW: Track pool capacity
+    
     if (!setBookings) setBookings = () => { };
 
-    // 🚀 UPDATED: Pool configuration with max 20 persons and 3-hour slots
+    // 🚀 UPDATED: Pool configuration with max 25 persons
     const facilityConfig = useMemo(() => {
         const baseConfig = {
             maxPersons: 4,
@@ -258,7 +358,15 @@ const BookingPage = ({ facility, setBookings, onClose }) => {
         };
 
         if (facility.type === "turf") {
-            return { ...baseConfig, type: 'Turf', slots: TURF_SLOTS, maxPersons: 4, costPerUnit: 100, playerLabel: 'Additional Players (Max 4)', allowMultipleSlots: true };
+            return { 
+                ...baseConfig, 
+                type: 'Turf', 
+                slots: TURF_SLOTS, 
+                maxPersons: 4, 
+                costPerUnit: 100, 
+                playerLabel: 'Additional Players (Max 4)', 
+                allowMultipleSlots: true 
+            };
         } else if (facility.type === "combo") {
             return { 
                 ...baseConfig, 
@@ -269,11 +377,11 @@ const BookingPage = ({ facility, setBookings, onClose }) => {
         } else if (facility.type === "pool") {
             return {
                 type: 'Pool (3-Hour Access)',
-                maxPersons: 20, // 🚀 UPDATED: Max 20 persons
+                maxPersons: 25, // 🚀 UPDATED: Max 25 persons
                 isPerPerson: true, 
                 costPerUnit: facility.price, 
-                slots: POOL_SLOTS, // 🚀 UPDATED: Using 3-hour pool slots
-                playerLabel: 'Number of Persons (Max 20)', // 🚀 UPDATED
+                slots: POOL_SLOTS,
+                playerLabel: 'Number of Persons (Max 25)', // 🚀 UPDATED
                 costLabel: 'Per Person Cost',
                 initialCount: 1,
                 allowMultipleSlots: false,
@@ -312,6 +420,18 @@ const BookingPage = ({ facility, setBookings, onClose }) => {
 
     const PRICE_PER_SLOT = facility.price || 0;
 
+    // 🚀 UPDATED: Calculate max allowed persons based on pool availability
+    const maxAllowedPersons = useMemo(() => {
+        if (facility.type === 'pool' && formData.timeSlots.length > 0) {
+            const selectedSlot = formData.timeSlots[0];
+            const capacity = poolCapacityData[selectedSlot];
+            if (capacity) {
+                return Math.min(MAX_POOL_CAPACITY - capacity.totalPersons, facilityConfig.maxPersons);
+            }
+        }
+        return facilityConfig.maxPersons;
+    }, [facility.type, formData.timeSlots, poolCapacityData, facilityConfig.maxPersons]);
+
     const totalPrice = useMemo(() => {
         const { isPerPerson, costPerUnit } = facilityConfig;
         
@@ -330,7 +450,7 @@ const BookingPage = ({ facility, setBookings, onClose }) => {
     const handlePersonChange = useCallback((change) => {
         setFormData(prev => {
             const newCount = prev.personsCount + change;
-            const max = facilityConfig.maxPersons;
+            const max = maxAllowedPersons; // 🚀 Use dynamic max
             const min = facilityConfig.isPerPerson ? 1 : 0;
 
             if (newCount >= min && newCount <= max) {
@@ -338,11 +458,12 @@ const BookingPage = ({ facility, setBookings, onClose }) => {
             }
             return prev;
         });
-    }, [facilityConfig.maxPersons, facilityConfig.isPerPerson]);
+    }, [maxAllowedPersons, facilityConfig.isPerPerson]);
 
     const incrementPerson = () => handlePersonChange(1);
     const decrementPerson = () => handlePersonChange(-1);
     
+    // 🚀 UPDATED: Fetch booked slots AND pool capacity data
     const fetchBookedSlots = async () => {
         try {
             const token = localStorage.getItem("token");
@@ -358,12 +479,43 @@ const BookingPage = ({ facility, setBookings, onClose }) => {
                 return;
             }
 
-            const allBlockedSlots = data.bookings.flatMap((b) => b.timeSlots);
-            setBlockedSlots(Array.from(new Set(allBlockedSlots))); 
+            // For turf and combo: just get blocked slots
+            if (facility.type !== 'pool') {
+                const allBlockedSlots = data.bookings.flatMap((b) => b.timeSlots);
+                setBlockedSlots(Array.from(new Set(allBlockedSlots)));
+                return;
+            }
+
+            // 🚀 For pool: calculate capacity per slot
+            const capacityMap = {};
+            
+            data.bookings.forEach((booking) => {
+                if (booking.facilityType === 'pool') {
+                    booking.timeSlots.forEach((slot) => {
+                        if (!capacityMap[slot]) {
+                            capacityMap[slot] = {
+                                totalPersons: 0,
+                                bookings: []
+                            };
+                        }
+                        capacityMap[slot].totalPersons += booking.additionalPlayers;
+                        capacityMap[slot].bookings.push(booking._id);
+                    });
+                }
+            });
+
+            setPoolCapacityData(capacityMap);
+            
+            // Mark slots as "blocked" only if fully booked
+            const fullyBookedSlots = Object.keys(capacityMap).filter(
+                slot => capacityMap[slot].totalPersons >= MAX_POOL_CAPACITY
+            );
+            setBlockedSlots(fullyBookedSlots);
 
         } catch (err) {
             console.error("Fetch booked slots error:", err);
             setBlockedSlots([]);
+            setPoolCapacityData({});
         }
     };
 
@@ -372,78 +524,109 @@ const BookingPage = ({ facility, setBookings, onClose }) => {
         fetchBookedSlots();
     }, [formData.date, facility]);
 
-   const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    try {
-        if (!facility) return toast.error("Please select a facility first.");
-        if (!formData.date) return toast.error("Please select a date.");
-        
-        let finalTimeSlots = formData.timeSlots;
-
-        if (formData.timeSlots?.length === 0) {
-             return toast.error("Please select a time slot.");
+    // 🚀 Reset person count when slot changes (for pool)
+    useEffect(() => {
+        if (facility.type === 'pool' && formData.timeSlots.length > 0) {
+            const selectedSlot = formData.timeSlots[0];
+            const capacity = poolCapacityData[selectedSlot];
+            
+            // Reset to 1 if current count exceeds available capacity
+            if (capacity && formData.personsCount > (MAX_POOL_CAPACITY - capacity.totalPersons)) {
+                setFormData(prev => ({ ...prev, personsCount: 1 }));
+            }
         }
+    }, [formData.timeSlots, poolCapacityData, facility.type]);
 
-        if (facility.type === 'combo' && formData.timeSlots.length === 1) {
-            const turfSlot = formData.timeSlots[0];
-            const poolSlot = getNextHourSlot(turfSlot);
-            finalTimeSlots = [turfSlot, poolSlot];
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+
+        try {
+            if (!facility) return toast.error("Please select a facility first.");
+            if (!formData.date) return toast.error("Please select a date.");
+            
+            // 🚀 Check if pool booking is allowed (before 9 PM)
+            if (facility.type === 'pool') {
+                const todayString = getTodayDateString();
+                if (formData.date === todayString && !isPoolBookingAllowed()) {
+                    return toast.error("Pool bookings are closed after 9 PM. Please try again tomorrow.");
+                }
+            }
+            
+            let finalTimeSlots = formData.timeSlots;
+
+            if (formData.timeSlots?.length === 0) {
+                return toast.error("Please select a time slot.");
+            }
+
+            if (facility.type === 'combo' && formData.timeSlots.length === 1) {
+                const turfSlot = formData.timeSlots[0];
+                const poolSlot = getNextHourSlot(turfSlot);
+                finalTimeSlots = [turfSlot, poolSlot];
+            }
+            
+            if (facility.type === 'pool' && formData.personsCount < 1) {
+                return toast.error("Please select at least 1 person for pool booking.");
+            }
+            
+            // 🚀 Validate pool capacity
+            if (facility.type === 'pool') {
+                const selectedSlot = formData.timeSlots[0];
+                const capacity = poolCapacityData[selectedSlot];
+                const available = capacity ? MAX_POOL_CAPACITY - capacity.totalPersons : MAX_POOL_CAPACITY;
+                
+                if (formData.personsCount > available) {
+                    return toast.error(`Only ${available} spots available for this slot.`);
+                }
+            }
+            
+            const token = localStorage.getItem("token");
+            if (!token) return toast.error("Please login first.");
+
+            const payload = {
+                facilityName: facility.name,
+                facilityType: facility.type,
+                date: formData.date,
+                timeSlots: finalTimeSlots, 
+                additionalPlayers: formData.personsCount || 0,
+                basePrice: facility.price,
+            };
+
+            const loadingToast = toast.loading("Creating your booking...");
+
+            const res = await fetch(`${API_URL}/api/bookings/`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify(payload),
+            });
+
+            const data = await res.json();
+            toast.dismiss(loadingToast); 
+
+            if (!res.ok) {
+                toast.error(data.message || "Booking failed");
+                return;
+            }
+
+            toast.success(`Booking successful!`);
+
+            setFormData({
+                date: "",
+                timeSlots: [],
+                personsCount: facilityConfig.initialCount,
+            });
+
+            setTimeout(() => {
+                onClose();
+            }, 1500);
+
+        } catch (error) {
+            console.error("Submit Error:", error);
+            toast.error("Something went wrong while creating the booking.");
         }
-        
-        if (facility.type === 'pool' && formData.personsCount < 1) {
-            return toast.error("Please select at least 1 person for pool booking.");
-        }
-        
-        const token = localStorage.getItem("token");
-        if (!token) return toast.error("Please login first.");
-
-        const payload = {
-            facilityName: facility.name,
-            facilityType: facility.type,
-            date: formData.date,
-            timeSlots: finalTimeSlots, 
-            additionalPlayers: formData.personsCount || 0,
-            basePrice: facility.price,
-        };
-
-        const loadingToast = toast.loading("Creating your booking...");
-
-        const res = await fetch(`${API_URL}/api/bookings/`, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify(payload),
-        });
-
-        const data = await res.json();
-        toast.dismiss(loadingToast); 
-
-        if (!res.ok) {
-            toast.error(data.message || "Booking failed");
-            return;
-        }
-
-        toast.success(`Booking successful!`);
-
-        setFormData({
-            date: "",
-            timeSlots: [],
-            personsCount: facilityConfig.initialCount,
-        });
-
-        // Delay closing slightly so user can actually see the success toast
-        setTimeout(() => {
-            onClose();
-        }, 1500);
-
-    } catch (error) {
-        console.error("Submit Error:", error);
-        toast.error("Something went wrong while creating the booking.");
-    }
-};
+    };
 
     const { maxPersons, playerLabel, costLabel, isPerPerson, costPerUnit, slots } = facilityConfig;
     const personsCount = formData.personsCount;
@@ -475,7 +658,6 @@ const BookingPage = ({ facility, setBookings, onClose }) => {
         return null;
     }, [isPool, formData.timeSlots]);
 
-
     return (
         <>
             <Toaster position="top-right" reverseOrder={false} />
@@ -498,6 +680,16 @@ const BookingPage = ({ facility, setBookings, onClose }) => {
                             {isPool ? " / Person" : " / Slot (Capacity: " + facility.capacity + ")"}
                         </span>
                     </div>
+                    
+                    {/* 🚀 Pool booking time warning */}
+                    {isPool && (
+                        <div className="mt-3 p-3 bg-orange-500/20 border border-orange-500/50 rounded-lg flex items-start gap-2">
+                            <AlertCircle size={18} className="text-orange-400 mt-0.5 flex-shrink-0" />
+                            <p className="text-orange-200 text-sm">
+                                Pool bookings close at 9:00 PM daily. You can book mid-slot if space is available.
+                            </p>
+                        </div>
+                    )}
                 </div>
 
                 <div className="space-y-8">
@@ -515,7 +707,7 @@ const BookingPage = ({ facility, setBookings, onClose }) => {
                     <div>
                         <h3 className="text-xl font-semibold mb-4 flex items-center gap-3 text-blue-300">
                             <Clock size={20} className="text-blue-500" />
-                            2. Select Time Slot (3-Hour Access)
+                            2. Select Time Slot {isPool && "(3-Hour Access)"}
                             {formData.timeSlots.length > 0 && (
                                 <span className="text-sm font-normal text-green-400">
                                     (Selected)
@@ -529,6 +721,7 @@ const BookingPage = ({ facility, setBookings, onClose }) => {
                             facilityType={facility.type}
                             blockedSlots={blockedSlots}
                             slots={slots}
+                            poolCapacityData={poolCapacityData} // 🚀 Pass capacity data
                         />
                     </div>
 
@@ -536,6 +729,12 @@ const BookingPage = ({ facility, setBookings, onClose }) => {
                         <h3 className="text-xl font-semibold mb-4 flex items-center gap-3 text-blue-300">
                             <Users size={20} className="text-blue-500" />
                             3. Number of Persons
+                            {/* 🚀 Show available spots for pool */}
+                            {isPool && formData.timeSlots.length > 0 && (
+                                <span className="text-sm font-normal text-green-400">
+                                    ({maxAllowedPersons} spots available)
+                                </span>
+                            )}
                         </h3>
                         <div>
                             <label className="block text-blue-100 mb-3 font-medium flex items-center gap-2">
@@ -556,7 +755,7 @@ const BookingPage = ({ facility, setBookings, onClose }) => {
                                     <button
                                         type="button"
                                         onClick={incrementPerson}
-                                        disabled={personsCount >= maxPersons}
+                                        disabled={personsCount >= maxAllowedPersons} // 🚀 Use dynamic max
                                         className="p-3 bg-green-600/70 hover:bg-green-700 disabled:opacity-30 text-white rounded-lg transition transform hover:scale-110"
                                     >
                                         <Plus size={24} />
