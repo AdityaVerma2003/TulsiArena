@@ -4,6 +4,8 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 const API_URL = import.meta.env.VITE_API_URL;
 import tulsiVillaLogo from '../assets/tulsiarena-logo.png';
+import { GoogleLogin } from '@react-oauth/google';
+import { jwtDecode } from 'jwt-decode';
 
 const RegisterPage = () => {
     const [formData, setFormData] = useState({ 
@@ -16,6 +18,32 @@ const RegisterPage = () => {
     const [touched, setTouched] = useState({});
     const [message, setMessage] = useState(null);
     const navigate = useNavigate();
+
+      // Google OAuth Handler
+  const handleGoogleSuccess = async (credentialResponse) => {
+    try {
+      const token = credentialResponse.credential;
+      const decoded = jwtDecode(token);
+
+      // Send Google token to backend
+      const res = await axios.post(`${API_URL}/api/auth/google-register`, {
+        token,
+      });
+
+      // Backend returns JWT for dashboard login
+      localStorage.setItem("token", res.data.token);
+      localStorage.setItem("role", res.data.user.role);
+
+      if(res.data.user.role === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate('/dashboard');
+      }
+    } catch (err) {
+      console.log(err);
+      setErrors({ general: err.response?.data?.message || "Google Login failed" });
+    }
+  };
 
     // Validation function for a single field
     const getFieldError = (name, value) => {
@@ -312,6 +340,13 @@ const RegisterPage = () => {
                 Create Account
               </button>
             </div>
+              {/* Google Login Button */}
+          <div className="mt-6 flex justify-center">
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={() => setErrors({ general: 'Google login failed' })}
+            />
+          </div>
 
             <p className="text-center text-blue-200 mt-6">
               Already have an account?{' '}
