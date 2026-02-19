@@ -2,8 +2,6 @@ import { User, ArrowUpRight, Star, X } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import bornFireImage from '../assets/bornfire.jpeg';
-import bornFireImage2 from '../assets/bornfire2.jpeg';
-import eveneVenueImage from '../assets/eventvenue.jpeg';
 import tulsiVillaImage from '../assets/tulsivilla.jpeg';
 import tulsiVillaImage2 from '../assets/tulsivlla2.jpeg';
 import villaPartyImage from '../assets/villaparty.jpeg';
@@ -17,6 +15,14 @@ const HomePage = () => {
   const [loading, setLoading] = useState(true);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [scrollY, setScrollY] = useState(0);
+  const [btnsVisible, setBtnsVisible] = useState(false);
+
+ useEffect(() => {
+  if (!loading) {
+    const timer = setTimeout(() => setBtnsVisible(true), 300);
+    return () => clearTimeout(timer);
+  }
+}, [loading]);
 
   // Booking Popup States
   const [showBookingPopup, setShowBookingPopup] = useState(false);
@@ -34,10 +40,7 @@ const HomePage = () => {
   const loadingImages = [
     eventvenue,
     airbnb,
-    tulsiVillaImage,
-    backgroundImage,
-    tulsiVillaImage2,
-    villaPartyImage
+    tulsiVillaImage
   ];
 
   const linkClass = 'text-slate-300 hover:text-white transition-colors cursor-pointer';
@@ -80,7 +83,7 @@ const HomePage = () => {
   // Validation function
   const validateForm = () => {
     const errors = {};
-    
+
     // Name validation
     if (!formData.name.trim()) {
       errors.name = 'Name is required';
@@ -89,12 +92,12 @@ const HomePage = () => {
     } else if (!/^[a-zA-Z\s]+$/.test(formData.name.trim())) {
       errors.name = 'Name should only contain letters';
     }
-    
+
     // Event type validation
     if (!formData.eventType) {
       errors.eventType = 'Event type is required';
     }
-    
+
     // Max persons validation
     if (!formData.maxPersons) {
       errors.maxPersons = 'Number of guests is required';
@@ -103,7 +106,7 @@ const HomePage = () => {
     } else if (formData.maxPersons > 1000) {
       errors.maxPersons = 'Maximum 1000 guests allowed';
     }
-    
+
     // Contact number validation (Indian format)
     const phoneRegex = /^[6-9]\d{9}$/;
     if (!formData.contactNumber.trim()) {
@@ -111,13 +114,13 @@ const HomePage = () => {
     } else if (!phoneRegex.test(formData.contactNumber.trim())) {
       errors.contactNumber = 'Enter valid 10-digit number (starting with 6-9)';
     }
-    
+
     return errors;
   };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    
+
     // For contact number, only allow digits
     if (name === 'contactNumber') {
       const digitsOnly = value.replace(/\D/g, '').slice(0, 10);
@@ -131,7 +134,7 @@ const HomePage = () => {
         [name]: value
       }));
     }
-    
+
     // Clear error for this field when user starts typing
     if (formErrors[name]) {
       setFormErrors(prev => ({
@@ -143,24 +146,24 @@ const HomePage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     // Validate form
     const errors = validateForm();
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
       return;
     }
-    
+
     setIsSubmitting(true);
-    
+
     try {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1500));
-      
+
       console.log('Booking submitted:', formData);
-      
+
       setSubmitSuccess(true);
-      
+
       // Reset form after 2.5 seconds
       setTimeout(() => {
         setShowBookingPopup(false);
@@ -173,7 +176,7 @@ const HomePage = () => {
         });
         setFormErrors({});
       }, 2500);
-      
+
     } catch (error) {
       console.error('Error submitting form:', error);
       setFormErrors({ submit: 'Failed to submit booking. Please try again.' });
@@ -207,7 +210,7 @@ const HomePage = () => {
 
     const loadingTimer = setTimeout(() => {
       setLoading(false);
-    }, 5500);
+    }, 2500);
 
     return () => {
       clearInterval(imageInterval);
@@ -249,13 +252,12 @@ const HomePage = () => {
           {loadingImages.map((img, index) => (
             <div
               key={index}
-              className={`absolute inset-0 transition-all duration-1000 ${
-                index === currentImageIndex 
-                  ? 'translate-y-0 opacity-100' 
-                  : index < currentImageIndex 
-                    ? '-translate-y-full opacity-0' 
-                    : 'translate-y-full opacity-0'
-              }`}
+              className={`absolute inset-0 transition-all duration-1000 ${index === currentImageIndex
+                ? 'translate-y-0 opacity-100'
+                : index < currentImageIndex
+                  ? '-translate-y-full opacity-0'
+                  : 'translate-y-full opacity-0'
+                }`}
             >
               <img
                 src={img}
@@ -299,11 +301,11 @@ const HomePage = () => {
         {/* Top Navigation with Logo and Login */}
         <nav className="relative z-20 flex justify-between items-center px-4 sm:px-8 py-6">
           <div className="flex items-center gap-3">
-            <img 
-            onClick={()=>navigate("/")}
-            src={tulsiVillaLogo}
-            className="w-16 h-16 sm:w-16 sm:h-16 rounded-full flex items-center justify-center cursor-pointer" alt="Logo" />
-            </div>
+            <img
+              onClick={() => navigate("/")}
+              src={tulsiVillaLogo}
+              className="w-16 h-16 sm:w-16 sm:h-16 rounded-full flex items-center justify-center cursor-pointer" alt="Logo" />
+          </div>
           <button
             onClick={() => navigate('/login')}
             className="flex items-center gap-2 px-5 py-3 bg-slate-800/60 backdrop-blur-md rounded-full border border-blue-500/30 hover:bg-slate-700/60 transition-all"
@@ -320,13 +322,48 @@ const HomePage = () => {
           </h1>
 
           {/* CTA Button */}
-          <button
-            onClick={() => navigate('/register')}
-            className="group flex items-center gap-3 px-10 sm:px-12 py-4 sm:py-5 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 hover:from-blue-700 hover:via-purple-700 hover:to-pink-700 text-white font-bold text-lg sm:text-xl rounded-full shadow-2xl transition-all duration-300 hover:scale-105 hover:shadow-blue-500/50"
+          <div
+            className={`grid grid-cols-1 sm:grid-cols-2 gap-4 justify-center items-center mt-12 transform transition-all duration-700
+    ${btnsVisible ? 'translate-y-0 opacity-100' : 'translate-y-16 opacity-0'}`}
           >
-            <span>Book Your Arena</span>
-            <ArrowUpRight size={22} className="transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-1" />
-          </button>
+            {/* Public Pool Button */}
+            <Link
+              to="/register"
+              className="group inline-flex items-center gap-3 justify-center px-8 py-4 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 hover:from-blue-700 hover:via-purple-700 hover:to-pink-700 text-white font-bold text-base sm:text-lg rounded-full shadow-2xl transition-all duration-300 hover:scale-105 hover:shadow-blue-500/50"
+            >
+              <span>Tulsi Villa Public Pool</span>
+              <ArrowUpRight size={20} className="transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-1" />
+            </Link>
+
+            {/* Private Pool Button */}
+            <a
+              href="https://wa.me/918368446067?text=Hi,%20I%20would%20like%20to%20book%20the%20Tulsi%20Villa%20Private%20Pool"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group inline-flex items-center gap-3 justify-center px-8 py-4 bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 hover:from-green-700 hover:via-emerald-700 hover:to-teal-700 text-white font-bold text-base sm:text-lg rounded-full shadow-2xl transition-all duration-300 hover:scale-105 hover:shadow-green-500/50"
+            >
+              <span>Tulsi Villa Private Pool</span>
+              <ArrowUpRight size={20} className="transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-1" />
+            </a>
+
+            {/* Book Venue Button */}
+            <button
+              onClick={() => setShowBookingPopup(true)}
+              className="group inline-flex items-center gap-3 justify-center px-8 py-4 bg-gradient-to-r from-orange-500 via-amber-500 to-yellow-500 hover:from-orange-600 hover:via-amber-600 hover:to-yellow-600 text-white font-bold text-base sm:text-lg rounded-full shadow-2xl transition-all duration-300 hover:scale-105 hover:shadow-orange-500/50"
+            >
+              <span>Book Venue</span>
+              <ArrowUpRight size={22} className="transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-1" />
+            </button>
+
+            {/* Book Slot Button */}
+            <button
+              onClick={() => navigate('/register')}
+              className="group inline-flex items-center gap-3 justify-center px-8 py-4 bg-gradient-to-r from-cyan-600 via-sky-600 to-blue-600 hover:from-cyan-700 hover:via-sky-700 hover:to-blue-700 text-white font-bold text-base sm:text-lg rounded-full shadow-2xl transition-all duration-300 hover:scale-105 hover:shadow-cyan-500/50"
+            >
+              <span>Book Your Slot Now</span>
+              <ArrowUpRight size={22} className="transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-1" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -341,65 +378,25 @@ const HomePage = () => {
       ${scrollY > 260 ? 'translate-y-0 opacity-100' : 'translate-y-20 opacity-0'}`}
           >
             Tulsi Villa, Prayagraj is a premium lifestyle destination that blends serene living with recreation and celebration.
-             {/* Line 2 (0.2s delay) */}
-          <span
-            className={`text-lg sm:text-xl text-slate-300 leading-relaxed mb-2
+            {/* Line 2 (0.2s delay) */}
+            <span
+              className={`text-lg sm:text-xl text-slate-300 leading-relaxed mb-2
       transform transition-all duration-1000 delay-300
       ${scrollY > 300 ? 'translate-y-0 opacity-100' : 'translate-y-20 opacity-0'}`}
-          >
-            Set amidst peaceful surroundings, it offers a wedding lawn, farmhouse stays, Airbnb rentals, a public swimming pool, private pool, Private Villas,futsal turf, and box cricket turf—making it ideal for family living, events, sports, and leisure. 
-          </span>
+            >
+              Set amidst peaceful surroundings, it offers a wedding lawn, farmhouse stays, Airbnb rentals, a public swimming pool, private pool, Private Villas,futsal turf, and box cricket turf—making it ideal for family living, events, sports, and leisure.
+            </span>
 
-          {/* Line 3 (0.5s delay) */}
-          <span
-            className={`text-lg sm:text-xl text-slate-300 leading-relaxed
+            {/* Line 3 (0.5s delay) */}
+            <span
+              className={`text-lg sm:text-xl text-slate-300 leading-relaxed
       transform transition-all duration-1000 delay-700
       ${scrollY > 340 ? 'translate-y-0 opacity-100' : 'translate-y-20 opacity-0'}`}
-          >
-             Tulsi Villa is where comfort, community, and memorable experiences come together.
-          </span>
+            >
+              Tulsi Villa is where comfort, community, and memorable experiences come together.
+            </span>
           </p>
 
-          {/* Buttons Container with Animation */}
-         {/* Buttons Container with Animation */}
-<div 
-  className={`flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center items-center mt-12 transform transition-all duration-1000 delay-1000
-    ${scrollY > 380 ? 'translate-y-0 opacity-100' : 'translate-y-20 opacity-0'}`}
->
-  {/* Public Pool Button */}
-  <Link 
-    to="/register" 
-    className="group inline-flex items-center gap-3 w-full sm:w-auto justify-center px-8 sm:px-10 py-4 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 hover:from-blue-700 hover:via-purple-700 hover:to-pink-700 text-white font-bold text-base sm:text-lg rounded-full shadow-2xl transition-all duration-300 hover:scale-105 hover:shadow-blue-500/50"
-  >
-    <span>Tulsi Villa Public Pool</span>
-    <ArrowUpRight size={20} className="transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-1" />
-  </Link>
-
-  {/* Private Pool Button - WhatsApp */}
-  <Link 
-    href="https://wa.me/918368446067?text=Hi,%20I%20would%20like%20to%20book%20the%20Tulsi%20Villa%20Private%20Pool"
-    target="_blank"
-    rel="noopener noreferrer" 
-    className="group inline-flex items-center gap-3 w-full sm:w-auto justify-center px-8 sm:px-10 py-4 bg-gradient-to-r from-green-600 via-emerald-600 to-teal-600 hover:from-green-700 hover:via-emerald-700 hover:to-teal-700 text-white font-bold text-base sm:text-lg rounded-full shadow-2xl transition-all duration-300 hover:scale-105 hover:shadow-green-500/50"
-  >
-    <span>Tulsi Villa Private Pool</span>
-    <ArrowUpRight size={20} className="transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-1" />
-  </Link>
-
-   <Link 
-            onClick={() => setShowBookingPopup(true)}
-            className="group inline-flex items-center gap-3 w-full sm:w-auto justify-center px-8 sm:px-10 py-4 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 hover:from-blue-700 hover:via-purple-700 hover:to-pink-700 text-white font-bold text-base sm:text-lg rounded-full shadow-2xl transition-all duration-300 hover:scale-105 hover:shadow-blue-500/50"
-          >
-            <span>Book Venue</span>
-            <ArrowUpRight size={22} className="transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-1" />
-          </Link>
-
-           <Link onClick={() => navigate('/register')} 
-          className="group inline-flex items-center gap-3 w-full sm:w-auto justify-center px-8 sm:px-10 py-4 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 hover:from-blue-700 hover:via-purple-700 hover:to-pink-700 text-white font-bold text-base sm:text-lg rounded-full shadow-2xl transition-all duration-300 hover:scale-105 hover:shadow-blue-500/50">
-            <span>Book Your Slot Now</span>
-            <ArrowUpRight size={22} className="transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-1" />
-          </Link>
-</div>
         </div>
       </div>
 
@@ -418,7 +415,7 @@ const HomePage = () => {
             <div className="relative group overflow-hidden rounded-2xl sm:rounded-3xl shadow-2xl border border-blue-500/20 w-full max-w-sm sm:max-w-4xl mx-auto">
               <img src={bornFireImage} alt="Arena exterior view" className="w-full h-[200px] sm:h-[500px] object-cover transition-transform duration-700 group-hover:scale-105" />
               <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent"></div>
-              
+
               {/* Animated overlay from bottom */}
               <div className={`absolute top-3 left-3 sm:top-6 sm:left-6 z-10 bg-slate-100/95 backdrop-blur-md rounded-xl sm:rounded-3xl px-4 py-2 sm:px-8 sm:py-4 shadow-xl transform transition-all duration-1000 ${scrollY > 800 ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
                 <p className="text-2xl sm:text-5xl font-black text-slate-900 leading-none">20min</p>
@@ -438,7 +435,7 @@ const HomePage = () => {
             <div className="relative group overflow-hidden rounded-2xl sm:rounded-3xl shadow-2xl border border-blue-500/20 w-full max-w-sm sm:max-w-4xl ml-auto">
               <img src={airbnb} alt="Arena interior facilities" className="w-full h-[200px] sm:h-[500px] object-cover transition-transform duration-700 group-hover:scale-105" />
               <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent"></div>
-              
+
               {/* Animated overlay from bottom */}
               <div className={`absolute top-3 left-3 sm:top-6 sm:left-6 z-10 bg-slate-100/95 backdrop-blur-md rounded-xl sm:rounded-3xl px-4 py-2 sm:px-8 sm:py-4 shadow-xl transform transition-all duration-1000 delay-300 ${scrollY > 1200 ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
                 <p className="text-2xl sm:text-5xl font-black text-slate-900 leading-none">Private Villa</p>
@@ -462,7 +459,7 @@ const HomePage = () => {
             <div className="relative group overflow-hidden rounded-2xl sm:rounded-3xl shadow-2xl border border-blue-500/20 w-full max-w-[250px] sm:max-w-md mx-auto">
               <img src="https://images.unsplash.com/photo-1459865264687-595d652de67e?w=600&h=900&fit=crop" alt="FUTSAL Turf" className="w-full h-[350px] sm:h-[600px] object-cover transition-transform duration-700 group-hover:scale-105" />
               <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent"></div>
-              
+
               {/* Animated overlay from bottom */}
               <div className={`absolute top-3 left-3 sm:top-6 sm:left-6 z-10 bg-slate-100/95 backdrop-blur-md rounded-xl sm:rounded-3xl px-4 py-2 sm:px-8 sm:py-4 shadow-xl transform transition-all duration-1000 delay-200 ${scrollY > 1600 ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
                 <p className="text-2xl sm:text-5xl font-black text-slate-900 leading-none">FIFA Approved</p>
@@ -474,7 +471,7 @@ const HomePage = () => {
             <div className="relative group overflow-hidden rounded-2xl sm:rounded-3xl shadow-2xl border border-blue-500/20 w-full max-w-sm sm:max-w-4xl mx-auto">
               <img src="https://images.unsplash.com/photo-1761757106344-441482b56693?w=1200&h=700&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8M3x8Ym94JTIwY3JpY2tldHxlbnwwfHwwfHx8MA%3D%3D" alt="Box Cricket" className="w-full h-[200px] sm:h-[500px] object-cover transition-transform duration-700 group-hover:scale-105" />
               <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent"></div>
-              
+
               {/* Animated overlay from bottom */}
               <div className={`absolute top-3 left-3 sm:top-6 sm:left-6 z-10 bg-slate-100/95 backdrop-blur-md rounded-xl sm:rounded-3xl px-4 py-2 sm:px-8 sm:py-4 shadow-xl transform transition-all duration-1000 delay-300 ${scrollY > 1800 ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
                 <p className="text-2xl sm:text-5xl font-black text-slate-900 leading-none">Box Cricket</p>
@@ -489,8 +486,8 @@ const HomePage = () => {
       <div className="relative py-6 px-4 text-center">
         <div className={`transform transition-all duration-1000 ${scrollY > 2000 ? 'translate-y-0 opacity-100' : 'translate-y-20 opacity-0'}`}>
           <h3 className="text-3xl sm:text-4xl font-bold text-white mb-8">Ready to Play?</h3>
-          <button onClick={() => navigate('/register')} 
-          className="group flex items-center gap-3 mx-auto px-10 sm:px-12 py-4 sm:py-5 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 hover:from-blue-700 hover:via-purple-700 hover:to-pink-700 text-white font-bold text-lg sm:text-xl rounded-full shadow-2xl transition-all duration-300 hover:scale-105 hover:shadow-blue-500/50">
+          <button onClick={() => navigate('/register')}
+            className="group flex items-center gap-3 mx-auto px-10 sm:px-12 py-4 sm:py-5 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 hover:from-blue-700 hover:via-purple-700 hover:to-pink-700 text-white font-bold text-lg sm:text-xl rounded-full shadow-2xl transition-all duration-300 hover:scale-105 hover:shadow-blue-500/50">
             <span>Book Your Slot Now</span>
             <ArrowUpRight size={22} className="transition-transform duration-300 group-hover:translate-x-1 group-hover:-translate-y-1" />
           </button>
@@ -523,7 +520,7 @@ const HomePage = () => {
       <div className="relative py-6 px-4 text-center">
         <div className={`transform transition-all duration-1000 ${scrollY > 2000 ? 'translate-y-0 opacity-100' : 'translate-y-20 opacity-0'}`}>
           <h3 className="text-3xl sm:text-4xl font-bold text-white mb-8">Book Your Venue Now</h3>
-          <button 
+          <button
             onClick={() => setShowBookingPopup(true)}
             className="group inline-flex items-center gap-3 mx-auto w-fit px-10 sm:px-12 py-4 sm:py-5 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 hover:from-blue-700 hover:via-purple-700 hover:to-pink-700 text-white font-bold text-lg sm:text-xl rounded-full shadow-2xl transition-all duration-300 hover:scale-105 hover:shadow-blue-500/50"
           >
@@ -577,9 +574,8 @@ const HomePage = () => {
                       name="name"
                       value={formData.name}
                       onChange={handleInputChange}
-                      className={`w-full px-4 py-3 bg-slate-800/50 border ${
-                        formErrors.name ? 'border-red-500' : 'border-blue-500/30'
-                      } rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors`}
+                      className={`w-full px-4 py-3 bg-slate-800/50 border ${formErrors.name ? 'border-red-500' : 'border-blue-500/30'
+                        } rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors`}
                       placeholder="Enter your full name"
                     />
                     {formErrors.name && (
@@ -590,7 +586,7 @@ const HomePage = () => {
                   </div>
 
                   {/* Event Type Field */}
-                <div>
+                  <div>
                     <label className="block text-sm font-semibold text-slate-300 mb-2">
                       Event Type <span className="text-red-400">*</span>
                     </label>
@@ -599,9 +595,8 @@ const HomePage = () => {
                       name="eventType"
                       value={formData.eventType}
                       onChange={handleInputChange}
-                      className={`w-full px-4 py-3 bg-slate-800/50 border ${
-                        formErrors.eventType ? 'border-red-500' : 'border-blue-500/30'
-                      } rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors`}
+                      className={`w-full px-4 py-3 bg-slate-800/50 border ${formErrors.eventType ? 'border-red-500' : 'border-blue-500/30'
+                        } rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors`}
                       placeholder="Enter event type (e.g. Wedding, Party, Sports)"
                     />
                     {formErrors.eventType && (
@@ -621,9 +616,8 @@ const HomePage = () => {
                       name="maxPersons"
                       value={formData.maxPersons}
                       onChange={handleInputChange}
-                      className={`w-full px-4 py-3 bg-slate-800/50 border ${
-                        formErrors.maxPersons ? 'border-red-500' : 'border-blue-500/30'
-                      } rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors`}
+                      className={`w-full px-4 py-3 bg-slate-800/50 border ${formErrors.maxPersons ? 'border-red-500' : 'border-blue-500/30'
+                        } rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors`}
                       placeholder="Expected number of guests"
                       min="1"
                     />
@@ -644,9 +638,8 @@ const HomePage = () => {
                       name="contactNumber"
                       value={formData.contactNumber}
                       onChange={handleInputChange}
-                      className={`w-full px-4 py-3 bg-slate-800/50 border ${
-                        formErrors.contactNumber ? 'border-red-500' : 'border-blue-500/30'
-                      } rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors`}
+                      className={`w-full px-4 py-3 bg-slate-800/50 border ${formErrors.contactNumber ? 'border-red-500' : 'border-blue-500/30'
+                        } rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors`}
                       placeholder="10-digit mobile number"
                       maxLength="10"
                     />
@@ -701,7 +694,7 @@ const HomePage = () => {
             <div className="space-y-6">
               <p onClick={() => { const section = document.getElementById('location-section'); section?.scrollIntoView({ behavior: 'smooth' }); }} className={linkClass}>Gallery</p>
               <p onClick={() => { const section = document.getElementById('reviews-section'); section?.scrollIntoView({ behavior: 'smooth' }); }} className={linkClass}>Reviews</p>
-             <p onClick={() => navigate('/contact')} className={linkClass}>Contact</p>
+              <p onClick={() => navigate('/contact')} className={linkClass}>Contact</p>
             </div>
           </div>
           <div className="mt-20 text-center text-slate-500 text-sm">
